@@ -13,7 +13,6 @@ age_struct_seir_simple <- function(times, init, params) {
     # susceptible
     S <- c(S1, S2, S3, S4, S5, S6, S7, S8, S9)
     Sv <- c(Sv1, Sv2, Sv3, Sv4, Sv5, Sv6, Sv7, Sv8, Sv9)
-
     # exposed
     E <- c(E1, E2, E3, E4, E5, E6, E7, E8, E9)
     Ev <- c(Ev1, Ev2, Ev3, Ev4, Ev5, Ev6, Ev7, Ev8, Ev9)
@@ -48,127 +47,67 @@ age_struct_seir_simple <- function(times, init, params) {
     # don't index parameters when there's no vaccination, it's faster!
     index <- floor(times) + 1              # use floor of time point + 1 to index df
     # daily vac rate
-    alpha1 <- params$alpha1[index, -1] # remove date column
-    # delay to protection
-    delay1 <- params$delay1[index, -1]
+    alpha <- params$alpha[index, -1] # remove date column
     # protection against infection (1 - VE_inf)
-    eta1   <- params$eta1[index, -1]
+    eta   <- params$eta[index, -1]
     # protection against hospitalisation 1 - (1 - VE_hosp) / (1 - VE_inf)
-    eta_hosp1   <- params$eta_hosp1[index, -1]
+    eta_hosp   <- params$eta_hosp[index, -1]
     # protection against transmission (1 - VE_trans)
-    eta_trans1   <- as.numeric(params$eta_trans1[index, -1])
+    eta_trans   <- as.numeric(params$eta_trans[index, -1])
     # ---------------------------------------------------------------
 
     # determine force of infection ----------------------------------
     # seasonality
     calendar_day <- lubridate::yday(as.Date(times, origin = calendar_start_date))
     # emergence of new variants
-    var1 <- (sigma1 + sigma2*tanh((t-t_var1)/l))
-    var2 <- (sigma1 + sigma2*tanh((t-t_var2)/l))
+    # var1 <- (sigma1 + sigma2*tanh((t-t_var1)/l))
+
     # determine transmission rate with seasonal/variant effects
-    beta_t <- beta * (1 + beta1 * cos(2 * pi * calendar_day / 365.24)) *
-      (var_emerg) * (1 + var1 + var2) + (!var_emerg) * 1
+    beta_t <- beta * (1 + beta1 * cos(2 * pi * calendar_day / 365.24))
+      # * (var_emerg) * (1 + var1 + var2) + (!var_emerg) * 1
     # calculate force of infection (lambda)
-    lambda <- beta_t * (contact_mat %*% (I + (eta_trans1 * Iv_1d) + (eta_trans2 * Iv_2d) + (eta_trans3 * Iv_3d)
-                                         + (eta_trans4 * Iv_4d) + (eta_trans5 * Iv_5d)
-    ))
+    lambda <- beta_t * (contact_mat %*% (I + (eta_trans * Iv)))
     # ---------------------------------------------------------------
 
     #################################################################
     # ODEs:
-    dS <- -lambda * S - alpha1 * S + (omega*4) * R_3w
-    dShold_1d <- alpha1 * S - (1/delay1) * Shold_1d - lambda * Shold_1d
-    dSv_1d <- (1/delay1) * Shold_1d - eta1 * lambda * Sv_1d - alpha2 * Sv_1d + (omega*4) * Rv_1d_3w
-    dShold_2d <- alpha2 * Sv_1d - (1/delay2) * Shold_2d - eta1 * lambda * Shold_2d
-    dSv_2d <- (1/delay2) * Shold_2d - eta2 * lambda * Sv_2d - alpha3 * Sv_2d + (omega*4) * Rv_2d_3w
-    dShold_3d <- alpha3 * Sv_2d - (1/delay3) * Shold_3d - eta2 * lambda * Shold_3d
-    dSv_3d <- (1/delay3) * Shold_3d - eta3 * lambda * Sv_3d - alpha4 * Sv_3d + (omega*4) * Rv_3d_3w
-    dShold_4d <- alpha4 * Sv_3d - (1/delay4) * Shold_4d - eta3 * lambda * Shold_4d
-    dSv_4d <- (1/delay4) * Shold_4d - eta4 * lambda * Sv_4d - alpha5 * Sv_4d + (omega*4) * Rv_4d_3w
-    dShold_5d <- alpha5 * Sv_4d - (1/delay5) * Shold_5d - eta4 * lambda * Shold_5d
-    dSv_5d <- (1/delay5) * Shold_5d - eta5 * lambda * Sv_5d + (omega*4) * Rv_5d_3w
+    dS  <- -lambda * S - alpha * S + (omega*4) * R_3w
+    dSv <- alpha * S - eta * lambda * Sv + (omega*4) * Rv_3w
 
-    dE     <- lambda * S + lambda * Shold_1d - sigma * E + epsilon
-    dEv_1d <- eta1 * lambda * Sv_1d + eta1 * lambda * Shold_2d - sigma * Ev_1d
-    dEv_2d <- eta2 * lambda * Sv_2d + eta2 * lambda * Shold_3d - sigma * Ev_2d
-    dEv_3d <- eta3 * lambda * Sv_3d + eta3 * lambda * Shold_4d - sigma * Ev_3d
-    dEv_4d <- eta4 * lambda * Sv_4d + eta4 * lambda * Shold_5d - sigma * Ev_4d
-    dEv_5d <- eta5 * lambda * Sv_5d - sigma * Ev_5d
+    dE  <- lambda * S - sigma * E + epsilon
+    dEv <- eta * lambda * Sv - sigma * Ev
 
-    dI     <- sigma * E - (gamma + h) * I
-    dIv_1d <- sigma * Ev_1d - (gamma + eta_hosp1 * h) * Iv_1d
-    dIv_2d <- sigma * Ev_2d - (gamma + eta_hosp2 * h) * Iv_2d
-    dIv_3d <- sigma * Ev_3d - (gamma + eta_hosp3 * h) * Iv_3d
-    dIv_4d <- sigma * Ev_4d - (gamma + eta_hosp4 * h) * Iv_4d
-    dIv_5d <- sigma * Ev_5d - (gamma + eta_hosp5 * h) * Iv_5d
+    dI  <- sigma * E - (gamma + h) * I
+    dIv <- sigma * Ev - (gamma + eta_hosp * h) * Iv
 
-    dH     <- h * I - (i1 + d + r) * H
-    dHv_1d <- eta_hosp1 * h * Iv_1d - (i1 + d + r) * Hv_1d
-    dHv_2d <- eta_hosp2 * h * Iv_2d - (i1 + d + r) * Hv_2d
-    dHv_3d <- eta_hosp3 * h * Iv_3d - (i1 + d + r) * Hv_3d
-    dHv_4d <- eta_hosp4 * h * Iv_4d - (i1 + d + r) * Hv_4d
-    dHv_5d <- eta_hosp5 * h * Iv_5d - (i1 + d + r) * Hv_5d
+    dH  <- h * I - (i1 + d + r) * H
+    dHv <- eta_hosp * h * Iv - (i1 + d + r) * Hv
 
-    dIC     <- i1 * H - (i2 + d_ic) * IC
-    dICv_1d <- i1 * Hv_1d - (i2 + d_ic) * ICv_1d
-    dICv_2d <- i1 * Hv_2d - (i2 + d_ic) * ICv_2d
-    dICv_3d <- i1 * Hv_3d - (i2 + d_ic) * ICv_3d
-    dICv_4d <- i1 * Hv_4d - (i2 + d_ic) * ICv_4d
-    dICv_5d <- i1 * Hv_5d - (i2 + d_ic) * ICv_5d
+    dIC  <- i1 * H - (i2 + d_ic) * IC
+    dICv <- i1 * Hv - (i2 + d_ic) * ICv
 
-    dH_IC     <- i2 * IC - (r_ic + d_hic) * H_IC
-    dH_ICv_1d <- i2 * ICv_1d - (r_ic + d_hic) * H_ICv_1d
-    dH_ICv_2d <- i2 * ICv_2d - (r_ic + d_hic) * H_ICv_2d
-    dH_ICv_3d <- i2 * ICv_3d - (r_ic + d_hic) * H_ICv_3d
-    dH_ICv_4d <- i2 * ICv_4d - (r_ic + d_hic) * H_ICv_4d
-    dH_ICv_5d <- i2 * ICv_5d - (r_ic + d_hic) * H_ICv_5d
+    dH_IC  <- i2 * IC - (r_ic + d_hic) * H_IC
+    dH_ICv <- i2 * ICv - (r_ic + d_hic) * H_ICv
 
-    dD <- d * (H + Hv_1d + Hv_2d + Hv_3d + Hv_4d + Hv_5d) +               #
-      d_ic * (IC + ICv_1d + ICv_2d + ICv_3d + ICv_4d + ICv_5d) +           #
-      d_hic * (H_IC + H_ICv_1d + H_ICv_2d + H_ICv_3d + H_ICv_4d + H_ICv_5d) #
+    dD <- d * (H + Hv) + d_ic * (IC + ICv) + d_hic * (H_IC + H_ICv)
 
-    dR     <- (gamma * I) + (r * H) + (r_ic * H_IC) - ((omega*4) * R)
-    dRv_1d <- (gamma * Iv_1d) + (r * Hv_1d) + (r_ic * H_ICv_1d) - ((omega*4) * Rv_1d)
-    dRv_2d <- (gamma * Iv_2d) + (r * Hv_2d) + (r_ic * H_ICv_2d) - ((omega*4) * Rv_2d)
-    dRv_3d <- (gamma * Iv_3d) + (r * Hv_3d) + (r_ic * H_ICv_3d) - ((omega*4) * Rv_3d)
-    dRv_4d <- (gamma * Iv_4d) + (r * Hv_4d) + (r_ic * H_ICv_4d) - ((omega*4) * Rv_4d)
-    dRv_5d <- (gamma * Iv_5d) + (r * Hv_5d) + (r_ic * H_ICv_5d) - ((omega*4) * Rv_5d)
+    dR  <- (gamma * I) + (r * H) + (r_ic * H_IC) - ((omega*4) * R)
+    dRv <- (gamma * Iv) + (r * Hv) + (r_ic * H_ICv) - ((omega*4) * Rv)
 
-    dR_1w     <- (omega*4) * R - (omega*4) * R_1w
-    dRv_1d_1w <- (omega*4) * Rv_1d - (omega*4) * Rv_1d_1w
-    dRv_2d_1w <- (omega*4) * Rv_2d - (omega*4) * Rv_2d_1w
-    dRv_3d_1w <- (omega*4) * Rv_3d - (omega*4) * Rv_3d_1w
-    dRv_4d_1w <- (omega*4) * Rv_4d - (omega*4) * Rv_4d_1w
-    dRv_5d_1w <- (omega*4) * Rv_5d - (omega*4) * Rv_5d_1w
+    dR_1w  <- (omega*4) * R - (omega*4) * R_1w
+    dRv_1w <- (omega*4) * Rv - (omega*4) * Rv_1w
 
-    dR_2w     <- (omega*4) * R_1w - (omega*4) * R_2w
-    dRv_1d_2w <- (omega*4) * Rv_1d_1w - (omega*4) * Rv_1d_2w
-    dRv_2d_2w <- (omega*4) * Rv_2d_1w - (omega*4) * Rv_2d_2w
-    dRv_3d_2w <- (omega*4) * Rv_3d_1w - (omega*4) * Rv_3d_2w
-    dRv_4d_2w <- (omega*4) * Rv_4d_1w - (omega*4) * Rv_4d_2w
-    dRv_5d_2w <- (omega*4) * Rv_5d_1w - (omega*4) * Rv_5d_2w
+    dR_2w  <- (omega*4) * R_1w - (omega*4) * R_2w
+    dRv_2w <- (omega*4) * Rv_1w - (omega*4) * Rv_2w
 
-    dR_3w     <- (omega*4) * R_2w - (omega*4) * R_3w
-    dRv_1d_3w <- (omega*4) * Rv_1d_2w - (omega*4) * Rv_1d_3w
-    dRv_2d_3w <- (omega*4) * Rv_2d_2w - (omega*4) * Rv_2d_3w
-    dRv_3d_3w <- (omega*4) * Rv_3d_2w - (omega*4) * Rv_3d_3w
-    dRv_4d_3w <- (omega*4) * Rv_4d_2w - (omega*4) * Rv_4d_3w
-    dRv_5d_3w <- (omega*4) * Rv_5d_2w - (omega*4) * Rv_5d_3w
+    dR_3w  <- (omega*4) * R_2w - (omega*4) * R_3w
+    dRv_3w <- (omega*4) * Rv_2w - (omega*4) * Rv_3w
     #################################################################
     dt <- 1
     # output --------------------------------------------------------
-    list(c(dt, dS, dSv_1d, dSv_2d,dSv_3d, dSv_4d, dSv_5d,
-           dShold_1d, dShold_2d,  dShold_3d, dShold_4d, dShold_5d,
-           dE, dEv_1d, dEv_2d, dEv_3d, dEv_4d, dEv_5d,
-           dI, dIv_1d, dIv_2d, dIv_3d, dIv_4d, dIv_5d,
-           dH, dHv_1d, dHv_2d, dHv_3d, dHv_4d, dHv_5d,
-           dIC, dICv_1d, dICv_2d, dICv_3d, dICv_4d, dICv_5d,
-           dH_IC, dH_ICv_1d, dH_ICv_2d, dH_ICv_3d, dH_ICv_4d, dH_ICv_5d,
-           dD,
-           dR, dRv_1d, dRv_2d, dRv_3d, dRv_4d, dRv_5d,
-           dR_1w, dRv_1d_1w, dRv_2d_1w, dRv_3d_1w, dRv_4d_1w, dRv_5d_1w,
-           dR_2w, dRv_1d_2w, dRv_2d_2w, dRv_3d_2w, dRv_4d_2w, dRv_5d_2w,
-           dR_3w, dRv_1d_3w, dRv_2d_3w, dRv_3d_3w, dRv_4d_3w, dRv_5d_3w
+    list(c(dt, dS, dSv, dE, dEv, dI, dIv, dH, dHv, dIC, dIC,
+           dH_IC, dH_ICv, dD, dR, dRv, dR_1w, dRv_1w,
+           dR_2w, dRv_2w, dR_3w, dRv_3w
     ))
   })
 }
