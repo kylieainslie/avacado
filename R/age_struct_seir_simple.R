@@ -25,86 +25,38 @@ age_struct_seir_simple <- function(times, init, params) {
     Hv <- c(Hv1, Hv2, Hv3, Hv4, Hv5, Hv6, Hv7, Hv8, Hv9)
     # ICU
     IC <- c(IC1, IC2, IC3, IC4, IC5, IC6, IC7, IC8, IC9)
-    ICv_1d <- c(ICv_1d1, ICv_1d2, ICv_1d3, ICv_1d4, ICv_1d5, ICv_1d6, ICv_1d7, ICv_1d8, ICv_1d9)
-    ICv_2d <- c(ICv_2d1, ICv_2d2, ICv_2d3, ICv_2d4, ICv_2d5, ICv_2d6, ICv_2d7, ICv_2d8, ICv_2d9)
-    ICv_3d <- c(ICv_3d1, ICv_3d2, ICv_3d3, ICv_3d4, ICv_3d5, ICv_3d6, ICv_3d7, ICv_3d8, ICv_3d9)
-    ICv_4d <- c(ICv_4d1, ICv_4d2, ICv_4d3, ICv_4d4, ICv_4d5, ICv_4d6, ICv_4d7, ICv_4d8, ICv_4d9)
-    ICv_5d <- c(ICv_5d1, ICv_5d2, ICv_5d3, ICv_5d4, ICv_5d5, ICv_5d6, ICv_5d7, ICv_5d8, ICv_5d9)
+    ICv <- c(ICv1, ICv2, ICv3, ICv4, ICv5, ICv6, ICv7, ICv8, ICv9)
     # return to hospital ward after ICU
     H_IC <- c(H_IC1, H_IC2, H_IC3, H_IC4, H_IC5, H_IC6, H_IC7, H_IC8, H_IC9)
-    H_ICv_1d <- c(H_ICv_1d1, H_ICv_1d2, H_ICv_1d3, H_ICv_1d4, H_ICv_1d5, H_ICv_1d6, H_ICv_1d7, H_ICv_1d8, H_ICv_1d9)
-    H_ICv_2d <- c(H_ICv_2d1, H_ICv_2d2, H_ICv_2d3, H_ICv_2d4, H_ICv_2d5, H_ICv_2d6, H_ICv_2d7, H_ICv_2d8, H_ICv_2d9)
-    H_ICv_3d <- c(H_ICv_3d1, H_ICv_3d2, H_ICv_3d3, H_ICv_3d4, H_ICv_3d5, H_ICv_3d6, H_ICv_3d7, H_ICv_3d8, H_ICv_3d9)
-    H_ICv_4d <- c(H_ICv_4d1, H_ICv_4d2, H_ICv_4d3, H_ICv_4d4, H_ICv_4d5, H_ICv_4d6, H_ICv_4d7, H_ICv_4d8, H_ICv_4d9)
-    H_ICv_5d <- c(H_ICv_5d1, H_ICv_5d2, H_ICv_5d3, H_ICv_5d4, H_ICv_5d5, H_ICv_5d6, H_ICv_5d7, H_ICv_5d8, H_ICv_5d9)
+    H_ICv <- c(H_ICv1, H_ICv2, H_ICv3, H_ICv4, H_ICv5, H_ICv6, H_ICv7, H_ICv8, H_ICv9)
     # death
     D <- c(D1, D2, D3, D4, D5, D6, D7, D8, D9)
     # recovered
     R <- c(R1, R2, R3, R4, R5, R6, R7, R8, R9)
-    Rv_1d <- c(Rv_1d1, Rv_1d2, Rv_1d3, Rv_1d4, Rv_1d5, Rv_1d6, Rv_1d7, Rv_1d8, Rv_1d9)
-    Rv_2d <- c(Rv_2d1, Rv_2d2, Rv_2d3, Rv_2d4, Rv_2d5, Rv_2d6, Rv_2d7, Rv_2d8, Rv_2d9)
-    Rv_3d <- c(Rv_3d1, Rv_3d2, Rv_3d3, Rv_3d4, Rv_3d5, Rv_3d6, Rv_3d7, Rv_3d8, Rv_3d9)
-    Rv_4d <- c(Rv_4d1, Rv_4d2, Rv_4d3, Rv_4d4, Rv_4d5, Rv_4d6, Rv_4d7, Rv_4d8, Rv_4d9)
-    Rv_5d <- c(Rv_5d1, Rv_5d2, Rv_5d3, Rv_5d4, Rv_5d5, Rv_5d6, Rv_5d7, Rv_5d8, Rv_5d9)
+    Rv <- c(Rv1, Rv2, Rv3, Rv4, Rv5, Rv6, Rv7, Rv8, Rv9)
     # extra recovered compartments so that waning immunity is not exponential
     R_1w <- c(R_1w1, R_1w2, R_1w3, R_1w4, R_1w5, R_1w6, R_1w7, R_1w8, R_1w9)
-    Rv_1d_1w <- c(Rv_1d_1w1, Rv_1d_1w2, Rv_1d_1w3, Rv_1d_1w4, Rv_1d_1w5, Rv_1d_1w6, Rv_1d_1w7, Rv_1d_1w8, Rv_1d_1w9)
-    Rv_2d_1w <- c(Rv_2d_1w1, Rv_2d_1w2, Rv_2d_1w3, Rv_2d_1w4, Rv_2d_1w5, Rv_2d_1w6, Rv_2d_1w7, Rv_2d_1w8, Rv_2d_1w9)
-    Rv_3d_1w <- c(Rv_3d_1w1, Rv_3d_1w2, Rv_3d_1w3, Rv_3d_1w4, Rv_3d_1w5, Rv_3d_1w6, Rv_3d_1w7, Rv_3d_1w8, Rv_3d_1w9)
-    Rv_4d_1w <- c(Rv_4d_1w1, Rv_4d_1w2, Rv_4d_1w3, Rv_4d_1w4, Rv_4d_1w5, Rv_4d_1w6, Rv_4d_1w7, Rv_4d_1w8, Rv_4d_1w9)
-    Rv_5d_1w <- c(Rv_5d_1w1, Rv_5d_1w2, Rv_5d_1w3, Rv_5d_1w4, Rv_5d_1w5, Rv_5d_1w6, Rv_5d_1w7, Rv_5d_1w8, Rv_5d_1w9)
+    Rv_1w <- c(Rv_1w1, Rv_1w2, Rv_1w3, Rv_1w4, Rv_1w5, Rv_1w6, Rv_1w7, Rv_1w8, Rv_1w9)
 
     R_2w <- c(R_2w1, R_2w2, R_2w3, R_2w4, R_2w5, R_2w6, R_2w7, R_2w8, R_2w9)
-    Rv_1d_2w <- c(Rv_1d_2w1, Rv_1d_2w2, Rv_1d_2w3, Rv_1d_2w4, Rv_1d_2w5, Rv_1d_2w6, Rv_1d_2w7, Rv_1d_2w8, Rv_1d_2w9)
-    Rv_2d_2w <- c(Rv_2d_2w1, Rv_2d_2w2, Rv_2d_2w3, Rv_2d_2w4, Rv_2d_2w5, Rv_2d_2w6, Rv_2d_2w7, Rv_2d_2w8, Rv_2d_2w9)
-    Rv_3d_2w <- c(Rv_3d_2w1, Rv_3d_2w2, Rv_3d_2w3, Rv_3d_2w4, Rv_3d_2w5, Rv_3d_2w6, Rv_3d_2w7, Rv_3d_2w8, Rv_3d_2w9)
-    Rv_4d_2w <- c(Rv_4d_2w1, Rv_4d_2w2, Rv_4d_2w3, Rv_4d_2w4, Rv_4d_2w5, Rv_4d_2w6, Rv_4d_2w7, Rv_4d_2w8, Rv_4d_2w9)
-    Rv_5d_2w <- c(Rv_5d_2w1, Rv_5d_2w2, Rv_5d_2w3, Rv_5d_2w4, Rv_5d_2w5, Rv_5d_2w6, Rv_5d_2w7, Rv_5d_2w8, Rv_5d_2w9)
+    Rv_2w <- c(Rv_2w1, Rv_2w2, Rv_2w3, Rv_2w4, Rv_2w5, Rv_2w6, Rv_2w7, Rv_2w8, Rv_2w9)
 
     R_3w <- c(R_3w1, R_3w2, R_3w3, R_3w4, R_3w5, R_3w6, R_3w7, R_3w8, R_3w9)
-    Rv_1d_3w <- c(Rv_1d_3w1, Rv_1d_3w2, Rv_1d_3w3, Rv_1d_3w4, Rv_1d_3w5, Rv_1d_3w6, Rv_1d_3w7, Rv_1d_3w8, Rv_1d_3w9)
-    Rv_2d_3w <- c(Rv_2d_3w1, Rv_2d_3w2, Rv_2d_3w3, Rv_2d_3w4, Rv_2d_3w5, Rv_2d_3w6, Rv_2d_3w7, Rv_2d_3w8, Rv_2d_3w9)
-    Rv_3d_3w <- c(Rv_3d_3w1, Rv_3d_3w2, Rv_3d_3w3, Rv_3d_3w4, Rv_3d_3w5, Rv_3d_3w6, Rv_3d_3w7, Rv_3d_3w8, Rv_3d_3w9)
-    Rv_4d_3w <- c(Rv_4d_3w1, Rv_4d_3w2, Rv_4d_3w3, Rv_4d_3w4, Rv_4d_3w5, Rv_4d_3w6, Rv_4d_3w7, Rv_4d_3w8, Rv_4d_3w9)
-    Rv_5d_3w <- c(Rv_5d_3w1, Rv_5d_3w2, Rv_5d_3w3, Rv_5d_3w4, Rv_5d_3w5, Rv_5d_3w6, Rv_5d_3w7, Rv_5d_3w8, Rv_5d_3w9)
+    Rv_3w <- c(Rv_3w1, Rv_3w2, Rv_3w3, Rv_3w4, Rv_3w5, Rv_3w6, Rv_3w7, Rv_3w8, Rv_3w9)
 
     # define vaccination parameters ---------------------------------
     # don't index parameters when there's no vaccination, it's faster!
     index <- floor(times) + 1              # use floor of time point + 1 to index df
     # daily vac rate
     alpha1 <- params$alpha1[index, -1] # remove date column
-    alpha2 <- params$alpha2[index, -1]
-    alpha3 <- params$alpha3[index, -1]
-    alpha4 <- params$alpha4[index, -1]
-    alpha5 <- params$alpha5[index, -1]
-
     # delay to protection
     delay1 <- params$delay1[index, -1]
-    delay2 <- params$delay2[index, -1]
-    delay3 <- params$delay3[index, -1]
-    delay4 <- params$delay4[index, -1]
-    delay5 <- params$delay5[index, -1]
-
     # protection against infection (1 - VE_inf)
     eta1   <- params$eta1[index, -1]
-    eta2   <- params$eta2[index, -1]
-    eta3   <- params$eta3[index, -1]
-    eta4   <- params$eta4[index, -1]
-    eta5   <- params$eta5[index, -1]
-
     # protection against hospitalisation 1 - (1 - VE_hosp) / (1 - VE_inf)
     eta_hosp1   <- params$eta_hosp1[index, -1]
-    eta_hosp2   <- params$eta_hosp2[index, -1]
-    eta_hosp3   <- params$eta_hosp3[index, -1]
-    eta_hosp4   <- params$eta_hosp4[index, -1]
-    eta_hosp5   <- params$eta_hosp5[index, -1]
-
     # protection against transmission (1 - VE_trans)
     eta_trans1   <- as.numeric(params$eta_trans1[index, -1])
-    eta_trans2   <- as.numeric(params$eta_trans2[index, -1])
-    eta_trans3   <- as.numeric(params$eta_trans3[index, -1])
-    eta_trans4   <- as.numeric(params$eta_trans4[index, -1])
-    eta_trans5   <- as.numeric(params$eta_trans5[index, -1])
     # ---------------------------------------------------------------
 
     # determine force of infection ----------------------------------
