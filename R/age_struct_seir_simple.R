@@ -42,18 +42,11 @@ age_struct_seir_simple <- function(times, init, params) {
 
     R_3w <- c(R_3w1, R_3w2, R_3w3, R_3w4, R_3w5, R_3w6, R_3w7, R_3w8, R_3w9)
     Rv_3w <- c(Rv_3w1, Rv_3w2, Rv_3w3, Rv_3w4, Rv_3w5, Rv_3w6, Rv_3w7, Rv_3w8, Rv_3w9)
-
-    # define vaccination parameters ---------------------------------
-    # don't index parameters when there's no vaccination, it's faster!
-    index <- floor(times) + 1              # use floor of time point + 1 to index df
-    # daily vac rate
-    alpha <- params$alpha[index, -1] # remove date column
-    # protection against infection (1 - VE_inf)
-    eta   <- params$eta[index, -1]
-    # protection against hospitalisation 1 - (1 - VE_hosp) / (1 - VE_inf)
-    eta_hosp   <- params$eta_hosp[index, -1]
-    # protection against transmission (1 - VE_trans)
-    eta_trans   <- as.numeric(params$eta_trans[index, -1])
+    # ---------------------------------------------------------------
+    
+    # vaccination rate ----------------------------------------------
+    if(t >= t_vac_start & t <= t_vac_end){alpha <- vac_cov/(t_vac_end - t_vac_start + 1)
+    } else{alpha <- c(rep(0,9))}
     # ---------------------------------------------------------------
 
     # determine force of infection ----------------------------------
