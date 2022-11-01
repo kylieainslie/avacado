@@ -9,6 +9,10 @@
 # TODO: break up code into work chunks
 # ------------------------------------------------------------------
 
+# Options ----------------------------------------------------------
+# suppress dplyr::summarise() warnings
+options(dplyr.summarise.inform = FALSE)
+
 # Load required packages/functions ---------------------------------
 library(deSolve)
 library(reshape2)
@@ -20,25 +24,60 @@ library(readxl)
 library(rARPACK)
 library(readr)
 library(lubridate)
+library(foreach)
+library(doParallel)
+library(here)
 
-devtools::load_all() # load vacamole
-library(vacamole)
+source("R/convert_vac_schedule2.R")
+source("R/na_to_zero.R")
+source("R/calc_waning.R")
+source("R/age_struct_seir_ode2.R")
+source("R/postprocess_age_struct_model_output2.R")
+source("R/summarise_results.R")
+source("R/get_foi.R")
 # -------------------------------------------------------------------
-
-# Load data ---------------------------------------------------------
-# if off the server, read in from inst/extdata/data
-data_date <- "2022-05-22"
-osiris1 <- readRDS(paste0("inst/extdata/data/case_data_upto_", data_date, ".rds"))
-
-# read in transition rates -----------------------------------------
-transition_rates <- readRDS("inst/extdata/inputs/transition_rates.rds")
-
-# define population size (by age group)
+# Define population size --------------------------------------------
 age_dist <- c(0.10319920, 0.11620856, 0.12740219, 0.12198707, 
               0.13083463,0.14514332, 0.12092904, 0.08807406, 
               0.04622194)
 n <- 17407585 # Dutch population size
 n_vec <- n * age_dist
+
+# probabilities -------------------------------------------------------
+dons_probs <- read_xlsx("inst/extdata/inputs/ProbabilitiesDelays_20210107.xlsx")
+p_infection2admission <- dons_probs$P_infection2admission
+p_admission2death <- dons_probs$P_admission2death
+p_admission2IC <- dons_probs$P_admission2IC
+p_IC2hospital <- dons_probs$P_IC2hospital
+p_hospital2death <- c(rep(0, 5), 0.01, 0.04, 0.12, 0.29) # (after ICU)
+p_reported_by_age <- c(0.29, 0.363, 0.381, 0.545, 0.645, 0.564, 0.365, 0.33, 
+                       0.409) # from Jantien
+
+# delays --------------------------------------------------------------
+time_symptom2admission <- c(2.29, 5.51, 5.05, 5.66, 6.55, 5.88, 5.69, 5.09, 
+                            4.33) # assume same as infectious2admission
+time_admission2discharge <- 7.9
+time_admission2IC <- 2.28
+time_IC2hospital <- 15.6
+time_hospital2discharge <- 10.1 # (after ICU)
+time_admission2death <- 7
+time_IC2death <- 19
+time_hospital2death <- 10 # (after ICU)
+
+# define transition rates ---------------------------------------------
+i2r    <- (1-p_infection2admission) / 2                    # I -> R
+i2h    <- p_infection2admission / time_symptom2admission   # I -> H
+
+h2ic   <- p_admission2IC / time_admission2IC               # H -> IC
+h2d    <- p_admission2death / time_admission2death         # H -> D
+h2r    <- (1 - (p_admission2IC + p_admission2death)) / time_admission2discharge
+# H -> R
+
+ic2hic <- p_IC2hospital / time_IC2hospital                 # IC -> H_IC
+ic2d   <- (1 - p_IC2hospital) / time_IC2death              # IC -> D
+
+hic2d  <- p_hospital2death / time_hospital2death           # H_IC -> D
+hic2r  <- (1 - p_hospital2death) / time_hospital2discharge # H_IC -> R
 
 # determine waning rate from Erlang distribution --------------------
 # We want the rate that corresponds to a 60% reduction in immunity after 
@@ -87,28 +126,32 @@ ve_params <- readRDS("inst/extdata/inputs/ve_params.rds")
 # parameters must be in a named list
 params <- list(beta = 0.0004,
                beta1 = 0.14,
-               gamma = 0.5,
                sigma = 0.5,
                epsilon = 0.0,
                omega = wane_8months,
                N = n_vec,
-               h = transition_rates$h,
-               i1 = transition_rates$i1,
-               i2 = transition_rates$i2,
-               d = transition_rates$d, 
-               d_ic = transition_rates$d_ic,
-               d_hic = transition_rates$d_hic,
-               r = transition_rates$r,
-               r_ic = transition_rates$r_ic,
-               p_report = 1/3,
-               c_start = april_2017,
-               keep_cm_fixed = FALSE,
-               #vac_inputs = vac_rates_wt,
-               use_cases = FALSE,  
-               no_vac = FALSE,
+               gamma = i2r,
+               h = i2h,
+               i1 = h2ic,
+               d = h2d,
+               r = h2r,
+               i2 = ic2hic,
+               d_ic = ic2d,
+               d_hic = hic2d,
+               r_ic = hic2r,
                t_calendar_start = yday(as.Date("2020-01-01")), 
-               beta_change = 0.0001,
-               t_beta_change = 165
+               # contact matrices for different levels of NPIs
+               c_start = april_2017,
+               c_lockdown = april_2020,
+               c_relaxed = june_2020,
+               c_very_relaxed = june_2021,
+               c_normal = april_2017,
+               keep_cm_fixed = FALSE,
+               # IC admission thresholds
+               thresh_n = 1/100000 * sum(n_vec),##
+               thresh_l = 3/100000 * sum(n_vec),
+               thresh_m = 10/100000 * sum(n_vec),
+               thresh_u = 40/100000 * sum(n_vec),
               )
 
 # Specify initial conditions --------------------------------------
@@ -140,9 +183,24 @@ init <- c(
   )
 
 # Run forward simulations --------------------------------------------
-times <- seq(0,250, by = 1)
+t_start <- init[1]
+t_end <- t_start + 365
+times <- as.integer(seq(t_start, t_end, by = 1))
+betas <- readRDS("inst/extdata/results/model_fits/beta_draws.rds")
+# sample 100 betas from last time window
+betas100 <- sample(betas[[length(betas)]]$beta, 100)
 
-seir_out <- lsoda(init, times, age_struct_seir_ode2, params)
-seir_out <- as.data.frame(seir_out)
-out <- postprocess_age_struct_model_output2(seir_out)
+# register parallel backend
+registerDoParallel(cores=15)
+n_sim <- 100
+# Scenario 
+scenarioA <- foreach(i = 1:n_sim) %dopar% {
+  paramsA$beta <- betas100[i]
+  paramsA$contact_mat <- april_2017[[i]]
+  
+  rk45 <- rkMethod("rk45dp7")
+  seir_out <- ode(init_cond, times, age_struct_seir_ode2, paramsA, method = rk45)
+  as.data.frame(seir_out)
+}
+saveRDS(scenarioA, "/rivm/s/ainsliek/results/avacado_results.rds")
 
