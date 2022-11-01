@@ -48,7 +48,30 @@ age_struct_seir_simple <- function(times, init, params) {
     if(t >= t_vac_start & t <= t_vac_end){alpha <- vac_cov/(t_vac_end - t_vac_start + 1)
     } else{alpha <- c(rep(0,9))}
     # ---------------------------------------------------------------
-
+    
+    # determine contact matrix based on IC admissions ---------------
+    ic_admin <- sum(i1 * (H + Hv_1d + Hv_2d))
+    
+    # initialise flags
+    if(times == 0 | params$keep_cm_fixed){
+      flag_relaxed <- 0
+      flag_very_relaxed <- 0
+      flag_normal <- 0
+    }
+    
+    # determine contact matrix to use based on criteria
+    tmp2 <- choose_contact_matrix(times = t,
+                                  params = params, 
+                                  criteria = ic_admisions, 
+                                  flag_relaxed = flag_relaxed, 
+                                  flag_very_relaxed = flag_very_relaxed, 
+                                  flag_normal = flag_normal, 
+                                  keep_fixed = keep_cm_fixed)
+    contact_mat <- tmp2$contact_matrix
+    flag_relaxed <- tmp2$flag_relaxed
+    flag_very_relaxed <- tmp2$flag_very_relaxed
+    flag_normal <- tmp2$flag_normal
+    
     # determine force of infection ----------------------------------
     # seasonality
     calendar_day <- lubridate::yday(as.Date(times, origin = calendar_start_date))
@@ -97,6 +120,13 @@ age_struct_seir_simple <- function(times, init, params) {
     dRv_3w <- (omega*4) * Rv_2w - (omega*4) * Rv_3w
     #################################################################
     dt <- 1
+    
+    # assign variables to global environment, so they can be used for
+    # the next iteration
+    assign("flag_relaxed", flag_relaxed, envir = globalenv())
+    assign("flag_very_relaxed", flag_very_relaxed, envir = globalenv())
+    assign("flag_normal", flag_normal, envir = globalenv())
+    
     # output --------------------------------------------------------
     list(c(dt, dS, dSv, dE, dEv, dI, dIv, dH, dHv, dIC, dIC,
            dH_IC, dH_ICv, dD, dR, dRv, dR_1w, dRv_1w,
