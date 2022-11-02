@@ -95,26 +95,16 @@ Fk <- function(lambda, tau, p){
 wane_3months <- uniroot(Fk, c(0,1), tau = 92, p = 0.6)$root
 wane_8months <- uniroot(Fk, c(0,1), tau = 244, p = 0.6)$root
 # contact matrices --------------------------------------------------
-#path <- "/rivm/s/ainsliek/data/contact_matrices/converted/"
-path <- "inst/extdata/inputs/contact_matrices/converted/"
+path <- "/rivm/s/ainsliek/data/contact_matrices/converted/"
+# path <- "inst/extdata/inputs/contact_matrices/converted/"
 april_2017     <- readRDS(paste0(path,"transmission_matrix_april_2017.rds"))
 april_2020     <- readRDS(paste0(path,"transmission_matrix_april_2020.rds"))
 june_2020      <- readRDS(paste0(path,"transmission_matrix_june_2020.rds"))
 september_2020 <- readRDS(paste0(path,"transmission_matrix_september_2020.rds"))
-february_2021  <- readRDS(paste0(path,"transmission_matrix_february_2021.rds"))
-june_2021      <- readRDS(paste0(path,"transmission_matrix_june_2021.rds"))
-november_2021  <- readRDS(paste0(path,"transmission_matrix_november_2021.rds"))
+# february_2021  <- readRDS(paste0(path,"transmission_matrix_february_2021.rds"))
+# june_2021      <- readRDS(paste0(path,"transmission_matrix_june_2021.rds"))
+# november_2021  <- readRDS(paste0(path,"transmission_matrix_november_2021.rds"))
 
-# put contact matrices into a list for input into fit_to_data_func()
-cm_list <- list(
-  april_2017 = april_2017,
-  april_2020 = april_2020,
-  june_2020 = june_2020,
-  september_2020 = september_2020,
-  february_2021 = february_2021,
-  june_2021 = june_2021,
-  november_2021 = november_2021
-)
 # ve estimates ------------------------------------------------------
 ve <- read_excel("inst/extdata/inputs/ve_estimates/ve_dat.xlsx", sheet = "wildtype") %>%
   group_by(dose, age_group, outcome) %>%
@@ -156,7 +146,7 @@ params <- list(N = n_vec,  # population size
                c_start = april_2017,
                c_lockdown = april_2020,
                c_relaxed = june_2020,
-               c_very_relaxed = june_2021,
+               c_very_relaxed = september_2020,
                c_normal = april_2017,
                keep_cm_fixed = FALSE,
                # IC admission thresholds
