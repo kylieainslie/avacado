@@ -28,10 +28,10 @@ library(foreach)
 library(doParallel)
 library(here)
 
-source("R/convert_vac_schedule2.R")
+# source("R/convert_vac_schedule2.R")
 source("R/na_to_zero.R")
-source("R/calc_waning.R")
-source("R/age_struct_seir_ode2.R")
+# source("R/calc_waning.R")
+source("R/age_struct_seir_simple.R")
 source("R/postprocess_age_struct_model_output2.R")
 source("R/summarise_results.R")
 source("R/get_foi.R")
@@ -116,20 +116,31 @@ cm_list <- list(
   november_2021 = november_2021
 )
 # ve estimates ------------------------------------------------------
-# list containing the following named lists:
-# delays, ve_inf, ve_hosp, ve_trans
-# each named list has the following named elements:
-# pfizer, moderna, astrazeneca, jansen
-ve_params <- readRDS("inst/extdata/inputs/ve_params.rds")
+ve <- read_excel("inst/extdata/inputs/ve_estimates/ve_dat.xlsx", sheet = "wildtype") %>%
+  group_by(dose, age_group, outcome) %>%
+  summarise(mean_ve = mean(ve))
+
+ve_inf <- ve %>% 
+  filter(outcome == "infection",
+         dose == "d2")
+
+ve_hosp <- ve %>% 
+  filter(outcome == "hospitalisation",
+         dose == "d2")
+
+ve_trans <- ve %>% 
+  filter(outcome == "transmission",
+         dose == "d2")
 
 # specify initial model parameters ---------------------------------
 # parameters must be in a named list
-params <- list(beta = 0.0004,
+params <- list(N = n_vec,  # population size
+               # rates
+               beta = 0.0004,
                beta1 = 0.14,
                sigma = 0.5,
                epsilon = 0.0,
                omega = wane_8months,
-               N = n_vec,
                gamma = i2r,
                h = i2h,
                i1 = h2ic,
@@ -139,6 +150,7 @@ params <- list(beta = 0.0004,
                d_ic = ic2d,
                d_hic = hic2d,
                r_ic = hic2r,
+               # simulation start time
                t_calendar_start = yday(as.Date("2020-01-01")), 
                # contact matrices for different levels of NPIs
                c_start = april_2017,
@@ -148,10 +160,14 @@ params <- list(beta = 0.0004,
                c_normal = april_2017,
                keep_cm_fixed = FALSE,
                # IC admission thresholds
-               thresh_n = 1/100000 * sum(n_vec),##
+               thresh_n = 1/100000 * sum(n_vec),
                thresh_l = 3/100000 * sum(n_vec),
                thresh_m = 10/100000 * sum(n_vec),
                thresh_u = 40/100000 * sum(n_vec),
+               # vaccination parameters
+               eta = 1- ve_inf$mean_ve,
+               eta_hosp = 1 - ve_hosp$mean_ve,
+               eta_trans = 1 - ve_trans$mean_ve
               )
 
 # Specify initial conditions --------------------------------------
@@ -186,9 +202,9 @@ init <- c(
 t_start <- init[1]
 t_end <- t_start + 365
 times <- as.integer(seq(t_start, t_end, by = 1))
-betas <- readRDS("inst/extdata/results/model_fits/beta_draws.rds")
+betas <- readRDS("../vacamole/inst/extdata/results/model_fits/beta_draws.rds")
 # sample 100 betas from last time window
-betas100 <- sample(betas[[length(betas)]]$beta, 100)
+betas100 <- sample(betas[[1]]$beta, 100)
 
 # register parallel backend
 registerDoParallel(cores=15)
