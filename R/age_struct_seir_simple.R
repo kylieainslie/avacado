@@ -54,7 +54,7 @@ age_struct_seir_simple <- function(times, init, params) {
     # ---------------------------------------------------------------
     
     # determine contact matrix based on IC admissions ---------------
-    ic_admin <- sum(i1 * (H + Hv_1d + Hv_2d))
+    ic_admin <- sum(i1 * (H + Hv))
     
     # initialise flags
     if(times == 0 | params$keep_cm_fixed){
