@@ -45,8 +45,12 @@ age_struct_seir_simple <- function(times, init, params) {
     # ---------------------------------------------------------------
     
     # vaccination rate ----------------------------------------------
-    if(t >= t_vac_start & t <= t_vac_end){alpha <- vac_cov/(t_vac_end - t_vac_start + 1)
-    } else{alpha <- c(rep(0,9))}
+    if(is.null(t_vac_start) | is.null(t_vac_end)){ 
+      alpha <- c(rep(0,9))
+    } else if (!is.null(t_vac_start) & t >= t_vac_start & 
+               !is.null(t_vac_end) & t <= t_vac_end){
+      alpha <- vac_cov/(t_vac_end - t_vac_start + 1)
+    } else {alpha <- c(rep(0,9))}
     # ---------------------------------------------------------------
     
     # determine contact matrix based on IC admissions ---------------

@@ -32,8 +32,8 @@ library(here)
 source("R/na_to_zero.R")
 # source("R/calc_waning.R")
 source("R/age_struct_seir_simple.R")
-source("R/postprocess_age_struct_model_output2.R")
-source("R/summarise_results.R")
+source("R/postprocess_age_struct_model_simple.R")
+source("R/summarise_results_simple.R")
 source("R/get_foi.R")
 # -------------------------------------------------------------------
 # Define population size --------------------------------------------
@@ -190,7 +190,7 @@ init <- c(
 
 # Run forward simulations --------------------------------------------
 t_start <- init[1]
-t_end <- t_start + 365
+t_end <- t_start + 180
 times <- as.integer(seq(t_start, t_end, by = 1))
 betas <- readRDS("../vacamole/inst/extdata/results/model_fits/beta_draws.rds")
 # sample 100 betas from last time window
@@ -205,8 +205,37 @@ scenarioA <- foreach(i = 1:n_sim) %dopar% {
   paramsA$contact_mat <- april_2017[[i]]
   
   rk45 <- rkMethod("rk45dp7")
-  seir_out <- ode(init_cond, times, age_struct_seir_ode2, paramsA, method = rk45)
+  seir_out <- ode(init_cond, times, age_struct_seir_simple, params, method = rk45)
   as.data.frame(seir_out)
 }
-saveRDS(scenarioA, "/rivm/s/ainsliek/results/avacado_results.rds")
+saveRDS(scenarioA, "/rivm/s/ainsliek/results/avacado_scenario1.rds")
 
+# Post-process scenario runs ---------------------------------------------------
+# Results must be in a csv file that contains only the following columns (in any
+# order). No additional columns are allowed.
+# - origin_date (date):	Date as YYYY-MM-DD, last day (Monday) of submission window
+# - scenario_id	(string):	A specified "scenario ID"
+# - target_variable	(string):	"inc case", "inc death", "inc hosp", "inc icu", "inc infection"
+# - horizon	(string):	The time horizon for the projection relative to the origin_date (e.g., X wk)
+# - target_end_date	(date):	Date as YYYY-MM-DD, the last day (Saturday) of the target week
+# - location (string): An ISO-2 country code or "H0" ("NL" for the Netherlands)
+# - sample	(numeric):	A integer corresponding to the sample index (used to plot trajectories)
+# - value	(numeric):	The projected count, a non-negative integer number of new cases or deaths in the epidemiological week
+
+# wrangle Scenario A output ----------------------------------------------------
+# read in saved output from model runs
+scenarioA <- readRDS("/rivm/s/ainsliek/results/avacado_scenario1.rds")
+#scenarioA <- readRDS("C:/Users/ainsliek/Dropbox/Kylie/Projects/RIVM/ECDC Scenario Modelling Hub/round 1/scenarioA.rds")
+sim <- length(scenarioA)
+# loop over samples and summarise results
+outA <- list()
+for(s in 1:sim){
+  seir_output <- postprocess_age_struct_model_output2(scenarioA[[s]])
+  paramsA$beta <- betas100[s]
+  paramsA$contact_mat <- april_2017[[s]]
+  seir_outcomes <- summarise_results(seir_output, params = paramsA, t_vec = times) %>%
+    mutate(sample = s)
+  outA[[s]] <- seir_outcomes
+}
+dfA <- bind_rows(outA) %>%
+  mutate(scenario_id = "A-2022-07-24") 
