@@ -32,9 +32,10 @@ library(here)
 source("R/na_to_zero.R")
 # source("R/calc_waning.R")
 source("R/age_struct_seir_simple.R")
-source("R/postprocess_age_struct_model_simple.R")
+source("R/postprocess_age_struct_model_output_simple.R")
 source("R/summarise_results_simple.R")
-source("R/get_foi.R")
+source("R/get_foi_simple.R")
+source("R/choose_contact_matrix.R")
 # -------------------------------------------------------------------
 # Define population size --------------------------------------------
 age_dist <- c(0.10319920, 0.11620856, 0.12740219, 0.12198707, 
@@ -50,12 +51,10 @@ p_admission2death <- dons_probs$P_admission2death
 p_admission2IC <- dons_probs$P_admission2IC
 p_IC2hospital <- dons_probs$P_IC2hospital
 p_hospital2death <- c(rep(0, 5), 0.01, 0.04, 0.12, 0.29) # (after ICU)
-p_reported_by_age <- c(0.29, 0.363, 0.381, 0.545, 0.645, 0.564, 0.365, 0.33, 
-                       0.409) # from Jantien
+p_reported_by_age <- c(0.29, 0.363, 0.381, 0.545, 0.645, 0.564, 0.365, 0.33, 0.409) # from Jantien
 
 # delays --------------------------------------------------------------
-time_symptom2admission <- c(2.29, 5.51, 5.05, 5.66, 6.55, 5.88, 5.69, 5.09, 
-                            4.33) # assume same as infectious2admission
+time_symptom2admission <- c(2.29, 5.51, 5.05, 5.66, 6.55, 5.88, 5.69, 5.09, 4.33) # assume same as infectious2admission
 time_admission2discharge <- 7.9
 time_admission2IC <- 2.28
 time_IC2hospital <- 15.6
@@ -92,7 +91,7 @@ Fk <- function(lambda, tau, p){
                         + (tau^3 * lambda^3)) - (p * 6)
 }
 
-wane_3months <- uniroot(Fk, c(0,1), tau = 92, p = 0.6)$root
+# wane_3months <- uniroot(Fk, c(0,1), tau = 92, p = 0.6)$root
 wane_8months <- uniroot(Fk, c(0,1), tau = 244, p = 0.6)$root
 # contact matrices --------------------------------------------------
 path <- "/rivm/s/ainsliek/data/contact_matrices/converted/"
@@ -129,7 +128,7 @@ params <- list(N = n_vec,  # population size
                beta = 0.0004,
                beta1 = 0.14,
                sigma = 0.5,
-               epsilon = 0.0,
+               epsilon = 0.01,
                omega = wane_8months,
                gamma = i2r,
                h = i2h,
@@ -141,7 +140,7 @@ params <- list(N = n_vec,  # population size
                d_hic = hic2d,
                r_ic = hic2r,
                # simulation start time
-               t_calendar_start = yday(as.Date("2020-01-01")), 
+               calendar_start_date = as.Date("2020-01-01"), 
                # contact matrices for different levels of NPIs
                c_start = april_2017,
                c_lockdown = april_2020,
@@ -155,6 +154,9 @@ params <- list(N = n_vec,  # population size
                thresh_m = 10/100000 * sum(n_vec),
                thresh_u = 40/100000 * sum(n_vec),
                # vaccination parameters
+               t_vac_start = NULL,
+               t_vac_end = NULL,
+               vac_cov = c(rep(0,9)),
                eta = 1- ve_inf$mean_ve,
                eta_hosp = 1 - ve_hosp$mean_ve,
                eta_trans = 1 - ve_trans$mean_ve
@@ -185,10 +187,15 @@ init <- c(
   R_2w = empty_state, 
   Rv_2w = empty_state, 
   R_3w = empty_state, 
-  Rv_3w = empty_state, 
+  Rv_3w = empty_state 
   )
 
 # Run forward simulations --------------------------------------------
+# Scenario A: no measures
+# Scenario B: voluntary
+# Scenario C: R < 1 @ high inf rate
+# Scenario D: R < 1 @ low inf rate
+# Scenario E: zero COVID
 t_start <- init[1]
 t_end <- t_start + 180
 times <- as.integer(seq(t_start, t_end, by = 1))
@@ -199,16 +206,31 @@ betas100 <- sample(betas[[1]]$beta, 100)
 # register parallel backend
 registerDoParallel(cores=15)
 n_sim <- 100
-# Scenario 
+# Scenario A: no measures ----
 scenarioA <- foreach(i = 1:n_sim) %dopar% {
-  paramsA$beta <- betas100[i]
-  paramsA$contact_mat <- april_2017[[i]]
+  params$beta <- betas100[i]
+  params$c_start <- april_2017[[i]]
+  params$keep_cm_fixed <- TRUE # force contact matrix to stay pre-COVID
   
   rk45 <- rkMethod("rk45dp7")
-  seir_out <- ode(init_cond, times, age_struct_seir_simple, params, method = rk45)
+  seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
   as.data.frame(seir_out)
 }
-saveRDS(scenarioA, "/rivm/s/ainsliek/results/avacado_scenario1.rds")
+saveRDS(scenarioA, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioA.rds")
+doParallel::stopImplicitCluster()
+
+# Scenario B: voluntary ----
+scenarioB <- foreach(i = 1:n_sim) %dopar% {
+  params$beta <- betas100[i]
+  params$c_start <- april_2017[[i]]
+  params$c_lockdown <- june_2020[[i]]
+  
+  rk45 <- rkMethod("rk45dp7")
+  seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
+  as.data.frame(seir_out)
+}
+saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenario/wave1_scenarioB.rds")
+doParallel::stopImplicitCluster()
 
 # Post-process scenario runs ---------------------------------------------------
 # Results must be in a csv file that contains only the following columns (in any
@@ -224,18 +246,19 @@ saveRDS(scenarioA, "/rivm/s/ainsliek/results/avacado_scenario1.rds")
 
 # wrangle Scenario A output ----------------------------------------------------
 # read in saved output from model runs
-scenarioA <- readRDS("/rivm/s/ainsliek/results/avacado_scenario1.rds")
+scenarioA <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioA.rds")
 #scenarioA <- readRDS("C:/Users/ainsliek/Dropbox/Kylie/Projects/RIVM/ECDC Scenario Modelling Hub/round 1/scenarioA.rds")
 sim <- length(scenarioA)
 # loop over samples and summarise results
 outA <- list()
 for(s in 1:sim){
-  seir_output <- postprocess_age_struct_model_output2(scenarioA[[s]])
-  paramsA$beta <- betas100[s]
-  paramsA$contact_mat <- april_2017[[s]]
-  seir_outcomes <- summarise_results(seir_output, params = paramsA, t_vec = times) %>%
+  seir_output <- postprocess_age_struct_model_output_simple(scenarioA[[s]])
+  params$beta <- betas100[s]
+  params$c_start <- april_2017[[s]]
+  params$keep_cm_fixed <- TRUE
+  seir_outcomes <- summarise_results_simple(seir_output, params = params, t_vec = times) %>%
     mutate(sample = s)
   outA[[s]] <- seir_outcomes
 }
 dfA <- bind_rows(outA) %>%
-  mutate(scenario_id = "A-2022-07-24") 
+  mutate(scenario_id = "A-Wave1") 
