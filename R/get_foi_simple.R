@@ -2,7 +2,7 @@
 #' @param x list of data frames for each state from SEIR model
 #' @param y1 data frame of protection against transmission due to vaccination from dose 1 at each time point
 #' @param beta vector of values of transmission rate for each time point
-#' @param contact_mat contact matrix
+#' @param contact_mat list of contact matrices for each time point
 #' @param times vector of time points that correspond to the rows of x
 #' @return matrix of force of infection in each age group (columns) at each
 #' time point (rows)
@@ -11,7 +11,7 @@
 get_foi_simple <- function(x, y1, beta, contact_mat, times){
   tmp <- list()
   for(t in 1:length(times)){
-    tmp[[t]] <- t(beta[t] * (contact_mat %*% (unlist(x$I[t,]) + 
+    tmp[[t]] <- t(beta[t] * (contact_mat[[t]] %*% (unlist(x$I[t,]) + 
                                              (unlist(y1) * unlist(x$Iv[t,]))))
     )
   }
