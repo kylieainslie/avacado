@@ -1,5 +1,4 @@
 #' Determine contact matrix based on thresholds of cases or IC admissions
-#' @param times vector of time points
 #' @param params list of parameter values
 #' @param criteria criteria by which to change contact matrix. User can choose between a number of
 #' cases per day or a number of IC admissions.
@@ -15,8 +14,7 @@
 #' @keywords vacamole
 #' @export
 
-choose_contact_matrix <- function(times,
-                                  params,
+choose_contact_matrix <- function(params,
                                   criteria,
                                   flag_relaxed,
                                   flag_very_relaxed,
@@ -36,7 +34,6 @@ choose_contact_matrix <- function(times,
     c_relaxed <- params$c_relaxed
     c_very_relaxed <- params$c_very_relaxed
     c_normal <- params$c_normal
-    t_normal <- params$t_normal
 
     # use simpler conditions where measures are only relaxed and not re-tightened
     # for flags
@@ -52,13 +49,7 @@ choose_contact_matrix <- function(times,
       flag_very_relaxed <- flag_very_relaxed + 1
     }
     if (criteria <= thresh_n) {
-      if (is.null(t_normal)) {
         flag_normal <- flag_normal + 1
-      } else if (times < t_normal) {
-        flag_normal <- 0
-      } else {
-        flag_normal <- flag_normal + 1
-      }
     }
     # for contact matrix
     if (flag_relaxed > 0 & flag_very_relaxed == 0) {
