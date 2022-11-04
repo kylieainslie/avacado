@@ -12,7 +12,7 @@ get_foi_simple <- function(x, y1, beta, contact_mat, times){
   tmp <- list()
   for(t in 1:length(times)){
     tmp[[t]] <- t(beta[t] * (contact_mat %*% (unlist(x$I[t,]) + 
-                                             (unlist(y1[t,]) * unlist(x$Iv[t,]))))
+                                             (unlist(y1) * unlist(x$Iv[t,]))))
     )
   }
   
