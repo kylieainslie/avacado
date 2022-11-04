@@ -10,13 +10,41 @@
 
 summarise_results_simple <- function(seir_output, params, t_vec) {
   
+  # determine contact matrix for each time step (to calculate correct FOI below)
+  contact_mat_list <- list()
+  # determine contact matrix based on IC admissions
+  ic_admin <- rowSums(params$i1 * (seir_output$H + seir_output$Hv))
+  
+  for(t in 1:length(t_vec)){
+    # initialise flags
+    if(t == 1 | params$keep_cm_fixed){
+      flag_relaxed <- 0
+      flag_very_relaxed <- 0
+      flag_normal <- 0
+    }
+    
+    # determine contact matrix to use based on criteria
+    tmp2 <- choose_contact_matrix(params = params, 
+                                  criteria = ic_admin[t], 
+                                  flag_relaxed = flag_relaxed, 
+                                  flag_very_relaxed = flag_very_relaxed, 
+                                  flag_normal = flag_normal, 
+                                  keep_fixed = params$keep_cm_fixed)
+    contact_mat_list[[t]] <- tmp2$contact_matrix
+    flag_relaxed <- tmp2$flag_relaxed
+    flag_very_relaxed <- tmp2$flag_very_relaxed
+    flag_normal <- tmp2$flag_normal 
+    
+  }
+  
   # get force of infection (lambda) --------------------------------------------
-  calendar_day <- lubridate::yday(as.Date(t_vec, origin = params$calendar_start_date))
+  calendar_day <- lubridate::yday(as.Date(t_vec, 
+                                          origin = params$calendar_start_date))
   beta_t <- params$beta * (1 + params$beta1 * cos(2 * pi * calendar_day / 365.24)) 
   lambda <- get_foi_simple(x  = seir_output, 
                            y1 = params$eta_trans,
                            beta = beta_t, 
-                           contact_mat = params$c_start,
+                           contact_mat = contact_mat_list,
                            times = t_vec)
   
   # calculate infections -------------------------------------------------------
