@@ -142,17 +142,13 @@ params <- list(N = n_vec,  # population size
                # simulation start time
                calendar_start_date = as.Date("2020-01-01"), 
                # contact matrices for different levels of NPIs
-               c_start = april_2017,
-               c_lockdown = april_2020,
-               c_relaxed = june_2020,
-               c_very_relaxed = september_2020,
-               c_normal = april_2017,
+               c_start = april_2017$mean,
+               c_lockdown = april_2020$mean,
+               c_open = april_2017$mean,
                keep_cm_fixed = FALSE,
                # IC admission thresholds
-               thresh_n = 1/100000 * sum(n_vec),
-               thresh_l = 3/100000 * sum(n_vec),
-               thresh_m = 10/100000 * sum(n_vec),
-               thresh_u = 40/100000 * sum(n_vec),
+               thresh_o = 1,
+               thresh_l = 40,
                # vaccination parameters
                t_vac_start = NULL,
                t_vac_end = NULL,
@@ -220,16 +216,71 @@ saveRDS(scenarioA, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioA.rds
 doParallel::stopImplicitCluster()
 
 # Scenario B: voluntary ----
+registerDoParallel(cores=15)
 scenarioB <- foreach(i = 1:n_sim) %dopar% {
+  params$keep_cm_fixed <- FALSE
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
   params$c_lockdown <- june_2020[[i]]
+  params$c_open <- params$c_start
   
   rk45 <- rkMethod("rk45dp7")
   seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
   as.data.frame(seir_out)
 }
-saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenario/wave1_scenarioB.rds")
+saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioB.rds")
+doParallel::stopImplicitCluster()
+
+# Scenario C: R<1 @ low incidence ----
+registerDoParallel(cores=15)
+scenarioB <- foreach(i = 1:n_sim) %dopar% {
+  params$keep_cm_fixed <- FALSE
+  params$beta <- betas100[i]
+  params$c_start <- april_2017[[i]]
+  params$c_lockdown <- june_2020[[i]]
+  params$c_open <- params$c_start
+  params$thresh_l <- 10
+  
+  rk45 <- rkMethod("rk45dp7")
+  seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
+  as.data.frame(seir_out)
+}
+saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioC.rds")
+doParallel::stopImplicitCluster()
+
+# Scenario D: R<1 @ high incidence ----
+registerDoParallel(cores=15)
+scenarioB <- foreach(i = 1:n_sim) %dopar% {
+  params$keep_cm_fixed <- FALSE
+  params$beta <- betas100[i]
+  params$c_start <- april_2017[[i]]
+  params$c_lockdown <- june_2020[[i]]
+  params$c_open <- params$c_start
+  params$thresh_l <- 40
+  
+  rk45 <- rkMethod("rk45dp7")
+  seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
+  as.data.frame(seir_out)
+}
+saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioD.rds")
+doParallel::stopImplicitCluster()
+
+# Scenario E: zero covid ----
+registerDoParallel(cores=15)
+scenarioB <- foreach(i = 1:n_sim) %dopar% {
+  params$keep_cm_fixed <- FALSE
+  params$beta <- betas100[i]
+  params$c_start <- april_2017[[i]]
+  params$c_lockdown <- june_2020[[i]]
+  params$c_open <- params$c_start
+  params$thresh_l <- 1
+  params$thresh_o <- 0
+  
+  rk45 <- rkMethod("rk45dp7")
+  seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
+  as.data.frame(seir_out)
+}
+saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioE.rds")
 doParallel::stopImplicitCluster()
 
 # Post-process scenario runs ---------------------------------------------------
@@ -247,18 +298,83 @@ doParallel::stopImplicitCluster()
 # wrangle Scenario A output ----------------------------------------------------
 # read in saved output from model runs
 scenarioA <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioA.rds")
-#scenarioA <- readRDS("C:/Users/ainsliek/Dropbox/Kylie/Projects/RIVM/ECDC Scenario Modelling Hub/round 1/scenarioA.rds")
-sim <- length(scenarioA)
-# loop over samples and summarise results
+scenarioB <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioB.rds")
+
+# create empty lists to store outputs
 outA <- list()
-for(s in 1:sim){
-  seir_output <- postprocess_age_struct_model_output_simple(scenarioA[[s]])
+outB <- list()
+# loop over samples and summarize results for each scenario
+for(s in 1:n_sim){
+  # specify shared parameter values (transmission rate and starting contact matrix)
   params$beta <- betas100[s]
   params$c_start <- april_2017[[s]]
+  params$c_open <- params$c_start
+  
+  # Scenario A - no measures
   params$keep_cm_fixed <- TRUE
-  seir_outcomes <- summarise_results_simple(seir_output, params = params, t_vec = times) %>%
+  
+  seir_outputA <- postprocess_age_struct_model_output_simple(scenarioA[[s]])
+  seir_outcomesA <- summarise_results_simple(seir_outputA, params = params, t_vec = times) %>%
     mutate(sample = s)
-  outA[[s]] <- seir_outcomes
+  outA[[s]] <- seir_outcomesA
+  
+  # Scenario B - voluntary
+  params$keep_cm_fixed <- FALSE
+  params$c_lockdown <- june_2020[[s]]
+  
+  seir_outputB <- postprocess_age_struct_model_output_simple(scenarioB[[s]])
+  seir_outcomesB <- summarise_results_simple(seir_outputB, params = params, t_vec = times) %>%
+    mutate(sample = s)
+  outB[[s]] <- seir_outcomesB
+  
+  # Scenario C - R<1 @ low incidence
+  params$keep_cm_fixed <- FALSE
+  params$c_lockdown <- june_2020[[s]]
+  params$thresh_l <- 10
+  
+  seir_outputC <- postprocess_age_struct_model_output_simple(scenarioC[[s]])
+  seir_outcomesC <- summarise_results_simple(seir_outputC, params = params, t_vec = times) %>%
+    mutate(sample = s)
+  outC[[s]] <- seir_outcomesC
+  
+  # Scenario D - R<1 @ high incidence
+  params$keep_cm_fixed <- FALSE
+  params$c_lockdown <- june_2020[[i]]
+  params$thresh_l <- 40
+  
+  seir_outputD <- postprocess_age_struct_model_output_simple(scenarioD[[s]])
+  seir_outcomesD <- summarise_results_simple(seir_outputD, params = params, t_vec = times) %>%
+    mutate(sample = s)
+  outD[[s]] <- seir_outcomesD
+  
+  # Scenario E - zero covid
+  params$keep_cm_fixed <- FALSE
+  params$c_lockdown <- june_2020[[i]]
+  params$thresh_l <- 1
+  params$thresh_o <- 0
+  
+  seir_outputE <- postprocess_age_struct_model_output_simple(scenarioE[[s]])
+  seir_outcomesE <- summarise_results_simple(seir_outputE, params = params, t_vec = times) %>%
+    mutate(sample = s)
+  outE[[s]] <- seir_outcomesE
+  
 }
-dfA <- bind_rows(outA) %>%
-  mutate(scenario_id = "A-Wave1") 
+
+# create data frames
+dfA <- bind_rows(outA) %>% mutate(scenario_id = "A-Wave1") 
+dfB <- bind_rows(outB) %>% mutate(scenario_id = "B-Wave1") 
+dfC <- bind_rows(outC) %>% mutate(scenario_id = "C-Wave1")
+dfD <- bind_rows(outC) %>% mutate(scenario_id = "D-Wave1")
+dfE <- bind_rows(outC) %>% mutate(scenario_id = "E-Wave1")
+
+
+
+
+
+
+
+
+
+
+
+

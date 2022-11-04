@@ -18,22 +18,16 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
   for(t in 1:length(t_vec)){
     # initialise flags
     if(t == 1 | params$keep_cm_fixed){
-      flag_relaxed <- 0
-      flag_very_relaxed <- 0
-      flag_normal <- 0
+      flag_open <- 0
     }
     
     # determine contact matrix to use based on criteria
     tmp2 <- choose_contact_matrix(params = params, 
                                   criteria = ic_admin[t], 
-                                  flag_relaxed = flag_relaxed, 
-                                  flag_very_relaxed = flag_very_relaxed, 
-                                  flag_normal = flag_normal, 
+                                  flag_open = flag_open, 
                                   keep_fixed = params$keep_cm_fixed)
     contact_mat_list[[t]] <- tmp2$contact_matrix
-    flag_relaxed <- tmp2$flag_relaxed
-    flag_very_relaxed <- tmp2$flag_very_relaxed
-    flag_normal <- tmp2$flag_normal 
+    flag_open <- tmp2$flag_open
     
   }
   
