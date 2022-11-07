@@ -64,8 +64,7 @@ age_struct_seir_simple <- function(times, init, params) {
     }
     
     # determine contact matrix to use based on criteria
-    tmp2 <- choose_contact_matrix(times = t,
-                                  params = params, 
+    tmp2 <- choose_contact_matrix(params = params, 
                                   criteria = ic_admisions, 
                                   flag_relaxed = flag_relaxed, 
                                   flag_very_relaxed = flag_very_relaxed, 
