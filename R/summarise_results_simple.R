@@ -85,12 +85,40 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
            horizon = paste(wk, "wk")) %>%
     select(-wk)
   
+  # calculate hospital occupancy -----------------------------------------------
+  hosp_occ <-  seir_output$H + seir_output$H_IC + seir_output$Hv + seir_output$H_ICv %>%
+    rename_with(., ~ paste0("age_group",1:9)) 
+  
+  hosp_occ <- hosp_occ %>%
+    mutate(target_variable = "occ hosp",
+           time = t_vec,
+           date = as.Date(time, origin = params$calendar_start_date),
+           epiweek = lubridate::epiweek(date),
+           year = lubridate::epiyear(date),
+           wk = floor(difftime(date, date[1], units = "weeks")) + 1,
+           horizon = paste(wk, "wk")) %>%
+    select(-wk)
+  
   # calculate IC admissions ----------------------------------------------------
   ic_admissions <- sweep(seir_output$H + seir_output$Hv, 2, params$i1, "*") %>%
     rename_with(., ~ paste0("age_group",1:9)) 
   
   ic_admissions <- ic_admissions %>%
     mutate(target_variable = "inc icu",
+           time = t_vec,
+           date = as.Date(time, origin = params$calendar_start_date),
+           epiweek = lubridate::epiweek(date),
+           year = lubridate::epiyear(date),
+           wk = floor(difftime(date, date[1], units = "weeks")) + 1,
+           horizon = paste(wk, "wk")) %>%
+    select(-wk)
+  
+  # calculate hospital occupancy -----------------------------------------------
+  ic_occ <-  seir_output$IC + seir_output$ICv %>%
+    rename_with(., ~ paste0("age_group",1:9)) 
+  
+  ic_occ <- ic_occ %>%
+    mutate(target_variable = "occ icu",
            time = t_vec,
            date = as.Date(time, origin = params$calendar_start_date),
            epiweek = lubridate::epiweek(date),
@@ -125,7 +153,9 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
   rtn <- bind_rows(new_infections, 
                    # new_cases, 
                    hosp_admissions, 
+                   hosp_occ,
                    ic_admissions, 
+                   ic_occ,
                    new_deaths) %>%
     pivot_longer(cols = age_group1:age_group9,
                  names_to = "age_group",
