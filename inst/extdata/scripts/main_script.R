@@ -41,6 +41,23 @@ age_dist <- c(0.10319920, 0.11620856, 0.12740219, 0.12198707,
 n <- 17407585 # Dutch population size
 n_vec <- n * age_dist
 
+# ve estimates ------------------------------------------------------
+ve <- read_excel("inst/extdata/inputs/ve_estimates/ve_dat.xlsx", sheet = "wildtype") %>%
+  group_by(dose, age_group, outcome) %>%
+  summarise(mean_ve = mean(ve))
+
+ve_inf <- ve %>% 
+  filter(outcome == "infection",
+         dose == "d2")
+
+ve_hosp <- ve %>% 
+  filter(outcome == "hospitalisation",
+         dose == "d2")
+
+ve_trans <- ve %>% 
+  filter(outcome == "transmission",
+         dose == "d2")
+
 # probabilities -------------------------------------------------------
 dons_probs <- read_xlsx("inst/extdata/inputs/ProbabilitiesDelays_20210107.xlsx")
 p_infection2admission <- dons_probs$P_infection2admission
@@ -63,7 +80,11 @@ time_hospital2death <- 10 # (after ICU)
 # define transition rates ---------------------------------------------
 time_in_i <- ((1-p_infection2admission) * 2) + (p_infection2admission * time_symptom2admission)
 i2r    <- (1-p_infection2admission) / time_in_i          
-i2h    <- p_infection2admission / time_in_i               
+i2h    <- p_infection2admission / time_in_i 
+
+time_in_iv <- ((1-(ve_hosp$mean_ve*p_infection2admission)) * 2) + ((ve_hosp$mean_ve*p_infection2admission) * time_symptom2admission)
+iv2rv    <- (1-(ve_hosp$mean_ve*p_infection2admission)) / time_in_iv          
+iv2hv    <- (ve_hosp$mean_ve*p_infection2admission) / time_in_iv 
 
 time_in_h <- (p_admission2IC * time_admission2IC) + (p_admission2death * time_admission2death) + ((1 - (p_admission2IC + p_admission2death)) * time_admission2discharge)
 h2ic   <- p_admission2IC / time_in_h                    
@@ -104,23 +125,6 @@ september_2020 <- readRDS(paste0(path,"transmission_matrix_september_2020.rds"))
 # june_2021      <- readRDS(paste0(path,"transmission_matrix_june_2021.rds"))
 # november_2021  <- readRDS(paste0(path,"transmission_matrix_november_2021.rds"))
 
-# ve estimates ------------------------------------------------------
-ve <- read_excel("inst/extdata/inputs/ve_estimates/ve_dat.xlsx", sheet = "wildtype") %>%
-  group_by(dose, age_group, outcome) %>%
-  summarise(mean_ve = mean(ve))
-
-ve_inf <- ve %>% 
-  filter(outcome == "infection",
-         dose == "d2")
-
-ve_hosp <- ve %>% 
-  filter(outcome == "hospitalisation",
-         dose == "d2")
-
-ve_trans <- ve %>% 
-  filter(outcome == "transmission",
-         dose == "d2")
-
 # specify initial model parameters ---------------------------------
 # parameters must be in a named list
 params <- list(N = n_vec,  # population size
@@ -131,7 +135,9 @@ params <- list(N = n_vec,  # population size
                epsilon = 0.00,
                omega = wane_8months,
                gamma = i2r,
+               gamma_v = iv2rv,
                h = i2h,
+               h_v = iv2hv,
                i1 = h2ic,
                d = h2d,
                r = h2r,
@@ -181,6 +187,7 @@ init <- c(
   D = empty_state,
   R = empty_state,
   Rv = empty_state#,
+  #N = n_vec
   # R_1w = empty_state, 
   # Rv_1w = empty_state,
   # R_2w = empty_state, 

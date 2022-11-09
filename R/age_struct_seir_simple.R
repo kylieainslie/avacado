@@ -87,17 +87,17 @@ age_struct_seir_simple <- function(times, init, params) {
     denom <- S + R #+ R_1w + R_2w + R_3w
     #################################################################
     # ODEs:
-    dS  <- (-lambda * S) - (alpha * (S/denom)) + (omega * R)
+    dS  <- (-lambda * S) + (omega * R)  - (alpha * (S/denom))
     dSv <- (alpha * (S/denom)) - (eta * lambda * Sv) + (omega * Rv)
 
     dE  <- (lambda * S) - (sigma * E) + epsilon
     dEv <- (eta * lambda * Sv) - (sigma * Ev)
 
     dI  <- (sigma * E)- (gamma * I) - (h * I)
-    dIv <- (sigma * Ev) - (gamma * Iv) - (eta_hosp * h * Iv)
+    dIv <- (sigma * Ev) - (gamma_v * Iv) - (h_v * Iv)
 
     dH  <- (h * I) - (i1 * H) - (d * H) - (r * H)
-    dHv <- (eta_hosp * h * Iv) - (i1 * Hv) - (d * Hv) - (r * Hv)
+    dHv <- (h_v * Iv) - (i1 * Hv) - (d * Hv) - (r * Hv)
 
     dIC  <- (i1 * H) - (i2 * IC) - (d_ic * IC)
     dICv <- (i1 * Hv) - (i2 * ICv) - (d_ic * ICv)
@@ -107,9 +107,11 @@ age_struct_seir_simple <- function(times, init, params) {
 
     dD <- (d * (H + Hv)) + (d_ic * (IC + ICv)) + (d_hic * (H_IC + H_ICv))
 
-    dR  <- (gamma * I) + (r * H) + (r_ic * H_IC) - alpha * (R/denom) - (omega * R) 
-    dRv <- (gamma * Iv) + (r * Hv) + (r_ic * H_ICv) + alpha * (R/denom) - (omega * Rv)
-
+    dR  <- (gamma * I) + (r * H) + (r_ic * H_IC) - (omega * R) - alpha * (R/denom)
+    dRv <- (gamma_v * Iv) + (r * Hv) + (r_ic * H_ICv) + alpha * (R/denom) - (omega * Rv)
+    
+    #dN <- dS + dSv + dE + dEv + dI + dIv + dH + dHv + dIC + dICv + dH_IC + dH_ICv + dD + dR + dRv
+    #if (sum(dN) != 0) {print(dN)}
     # dR_1w  <- (omega*4) * R - alpha * (R_1w/denom) - (omega*4) * R_1w
     # dRv_1w <- (omega*4) * Rv + alpha * (R_1w/denom) - (omega*4) * Rv_1w
     # 
@@ -120,14 +122,13 @@ age_struct_seir_simple <- function(times, init, params) {
     # dRv_3w <- (omega*4) * Rv_2w + alpha * (R_3w/denom) - (omega*4) * Rv_3w
     #################################################################
     dt <- 1
-    
     # assign variables to global environment, so they can be used for
     # the next iteration
     assign("flag_open", flag_open, envir = globalenv())
     
     # output --------------------------------------------------------
-    list(c(dt, dS, dSv, dE, dEv, dI, dIv, dH, dHv, dIC, dIC,
-           dH_IC, dH_ICv, dD, dR, dRv#, 
+    list(c(dt, dS, dSv, dE, dEv, dI, dIv, dH, dHv, dIC, dICv,
+           dH_IC, dH_ICv, dD, dR, dRv#, dN
            #dR_1w, dRv_1w,dR_2w, dRv_2w, dR_3w, dRv_3w
     ))
   })
