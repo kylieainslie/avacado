@@ -11,34 +11,29 @@
 #' @export
 
 choose_contact_matrix_simple <- function(params,criteria,flag_open,keep_fixed) {
+  
+  # initialise flag and contact matrix
+  flag_open <- 0
+  contact_matrix <- params$c_start
+  
   # define variables from params
-  if (!is.null(c_start) & keep_fixed) {
+  if (keep_fixed) {
     contact_matrix <- params$c_start
-    flag_open <- 0
-  } else {
-    thresh_lockdown <- params$thresh_l
-    thresh_open <- params$thresh_o
-
-    c_lockdown <- params$c_lockdown
-    c_open <- params$c_open
-
-    # use simpler conditions where measures are only relaxed and not re-tightened
-    # for flags
-    if (criteria >= thresh_lockdown) {
+  } else if (criteria >= params$thresh_l) {
       flag_open <- 1
-    }
-    if (criteria <= thresh_open) {
+      contact_matrix <- params$c_lockdown
+  } else if (criteria <= params$thresh_o & flag_open > 0) {
       flag_open <- 2
-    }
+      contact_matrix <- params$c_open
+  }
     
     # for contact matrix
-    if (flag_open == 0) {
-      contact_matrix <- c_start
-    } else if (flag_open == 1) {
-      contact_matrix <- c_lockdown
-    } else {contact_matric <- c_open}
-  }
-
+    # if (flag_open == 0) {
+    #   contact_matrix <- c_start
+    # } else if (flag_open == 1) {
+    #   contact_matrix <- params$c_lockdown
+    # } else {contact_matric <- params$c_open}
+  
   rtn <- list(
     contact_matrix = contact_matrix,
     flag_open = flag_open
