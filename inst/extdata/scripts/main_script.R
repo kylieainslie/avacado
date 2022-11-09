@@ -1,12 +1,9 @@
-# Script for running scenarios for the Eupropean Scenario Hub
-# URL: https://github.com/covid19-forecast-hub-europe/covid19-scenario-hub-europe#readme
+# Script for running scenarios for the RIVM Scenarios Project
 
 # preamble ---------------------------------------------------------
-# This script will load necessary packages, data sources, fit the model to data,
-# and then run scenarios.
-# All scenarios will be using Dutch data
-# TODO: generalize to other European countries
-# TODO: break up code into work chunks
+# This script will load necessary packages, data sources, fit the 
+# model to data, and then run scenarios.
+
 # ------------------------------------------------------------------
 
 # Options ----------------------------------------------------------
@@ -35,7 +32,7 @@ source("R/age_struct_seir_simple.R")
 source("R/postprocess_age_struct_model_output_simple.R")
 source("R/summarise_results_simple.R")
 source("R/get_foi_simple.R")
-source("R/choose_contact_matrix.R")
+source("R/choose_contact_matrix_simple.R")
 # -------------------------------------------------------------------
 # Define population size --------------------------------------------
 age_dist <- c(0.10319920, 0.11620856, 0.12740219, 0.12198707, 
@@ -51,7 +48,7 @@ p_admission2death <- dons_probs$P_admission2death
 p_admission2IC <- dons_probs$P_admission2IC
 p_IC2hospital <- dons_probs$P_IC2hospital
 p_hospital2death <- c(rep(0, 5), 0.01, 0.04, 0.12, 0.29) # (after ICU)
-p_reported_by_age <- c(0.29, 0.363, 0.381, 0.545, 0.645, 0.564, 0.365, 0.33, 0.409) # from Jantien
+# p_reported_by_age <- c(0.29, 0.363, 0.381, 0.545, 0.645, 0.564, 0.365, 0.33, 0.409) # from Jantien
 
 # delays --------------------------------------------------------------
 time_symptom2admission <- c(2.29, 5.51, 5.05, 5.66, 6.55, 5.88, 5.69, 5.09, 4.33) # assume same as infectious2admission
@@ -64,19 +61,22 @@ time_IC2death <- 19
 time_hospital2death <- 10 # (after ICU)
 
 # define transition rates ---------------------------------------------
-i2r    <- (1-p_infection2admission) / 2                    # I -> R
-i2h    <- p_infection2admission / time_symptom2admission   # I -> H
+time_in_i <- ((1-p_infection2admission) * 2) + (p_infection2admission * time_symptom2admission)
+i2r    <- (1-p_infection2admission) / time_in_i          
+i2h    <- p_infection2admission / time_in_i               
 
-h2ic   <- p_admission2IC / time_admission2IC               # H -> IC
-h2d    <- p_admission2death / time_admission2death         # H -> D
-h2r    <- (1 - (p_admission2IC + p_admission2death)) / time_admission2discharge
-# H -> R
+time_in_h <- (p_admission2IC * time_admission2IC) + (p_admission2death * time_admission2death) + ((1 - (p_admission2IC + p_admission2death)) * time_admission2discharge)
+h2ic   <- p_admission2IC / time_in_h                    
+h2d    <- p_admission2death / time_in_h  
+h2r    <- (1 - (p_admission2IC + p_admission2death)) / time_in_h
 
-ic2hic <- p_IC2hospital / time_IC2hospital                 # IC -> H_IC
-ic2d   <- (1 - p_IC2hospital) / time_IC2death              # IC -> D
+time_in_ic <- (p_IC2hospital * time_IC2hospital) + ((1 - p_IC2hospital) * time_IC2death)
+ic2hic <- p_IC2hospital / time_in_ic
+ic2d   <- (1 - p_IC2hospital) / time_in_ic
 
-hic2d  <- p_hospital2death / time_hospital2death           # H_IC -> D
-hic2r  <- (1 - p_hospital2death) / time_hospital2discharge # H_IC -> R
+time_in_hic <- (p_hospital2death * time_hospital2death) + ((1 - p_hospital2death) * time_hospital2discharge)
+hic2d  <- p_hospital2death / time_in_hic         
+hic2r  <- (1 - p_hospital2death) / time_in_hic
 
 # determine waning rate from Erlang distribution --------------------
 # We want the rate that corresponds to a 60% reduction in immunity after 
@@ -128,7 +128,7 @@ params <- list(N = n_vec,  # population size
                beta = 0.0004,
                beta1 = 0.14,
                sigma = 0.5,
-               epsilon = 0.01,
+               epsilon = 0.00,
                omega = wane_8months,
                gamma = i2r,
                h = i2h,
@@ -150,24 +150,27 @@ params <- list(N = n_vec,  # population size
                thresh_o = 1,
                thresh_l = 40,
                # vaccination parameters
+               alpha = c(rep(0,9)),
                t_vac_start = NULL,
                t_vac_end = NULL,
-               vac_cov = c(rep(0,9)),
-               eta = 1- ve_inf$mean_ve,
-               eta_hosp = 1 - ve_hosp$mean_ve,
-               eta_trans = 1 - ve_trans$mean_ve
+               eta = 1, # - ve_inf$mean_ve,
+               eta_hosp = 1, # - ve_hosp$mean_ve,
+               eta_trans = 1 # - ve_trans$mean_ve
               )
 
 # Specify initial conditions --------------------------------------
 empty_state <- c(rep(0, 9)) # vector of zeros
+seed_age_group <- sample(1:9,1)
+inf_seed_vec <- empty_state
+inf_seed_vec[seed_age_group] <- 1
 
 init <- c(
   t = 0,
-  S = c(n_vec[1:4], n_vec[5]-1, n_vec[6:9]),
+  S = n_vec - inf_seed_vec,
   Sv = empty_state,
   E = empty_state,
   Ev = empty_state,
-  I = c(rep(0,4),1,rep(0,4)),
+  I = inf_seed_vec,
   Iv = empty_state,
   H = empty_state,
   Hv = empty_state,
@@ -177,13 +180,13 @@ init <- c(
   H_ICv = empty_state,
   D = empty_state,
   R = empty_state,
-  Rv = empty_state,
-  R_1w = empty_state, 
-  Rv_1w = empty_state, 
-  R_2w = empty_state, 
-  Rv_2w = empty_state, 
-  R_3w = empty_state, 
-  Rv_3w = empty_state 
+  Rv = empty_state#,
+  # R_1w = empty_state, 
+  # Rv_1w = empty_state,
+  # R_2w = empty_state, 
+  # Rv_2w = empty_state,
+  # R_3w = empty_state, 
+  # Rv_3w = empty_state
   )
 
 # Run forward simulations --------------------------------------------
@@ -193,7 +196,7 @@ init <- c(
 # Scenario D: R < 1 @ low inf rate
 # Scenario E: zero COVID
 t_start <- init[1]
-t_end <- t_start + 180
+t_end <- t_start + 365
 times <- as.integer(seq(t_start, t_end, by = 1))
 betas <- readRDS("../vacamole/inst/extdata/results/model_fits/beta_draws.rds")
 # sample 100 betas from last time window
@@ -233,7 +236,7 @@ doParallel::stopImplicitCluster()
 
 # Scenario C: R<1 @ low incidence ----
 registerDoParallel(cores=15)
-scenarioB <- foreach(i = 1:n_sim) %dopar% {
+scenarioC <- foreach(i = 1:n_sim) %dopar% {
   params$keep_cm_fixed <- FALSE
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
@@ -245,12 +248,12 @@ scenarioB <- foreach(i = 1:n_sim) %dopar% {
   seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
   as.data.frame(seir_out)
 }
-saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioC.rds")
+saveRDS(scenarioC, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioC.rds")
 doParallel::stopImplicitCluster()
 
 # Scenario D: R<1 @ high incidence ----
 registerDoParallel(cores=15)
-scenarioB <- foreach(i = 1:n_sim) %dopar% {
+scenarioD <- foreach(i = 1:n_sim) %dopar% {
   params$keep_cm_fixed <- FALSE
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
@@ -262,12 +265,12 @@ scenarioB <- foreach(i = 1:n_sim) %dopar% {
   seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
   as.data.frame(seir_out)
 }
-saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioD.rds")
+saveRDS(scenarioD, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioD.rds")
 doParallel::stopImplicitCluster()
 
 # Scenario E: zero covid ----
 registerDoParallel(cores=15)
-scenarioB <- foreach(i = 1:n_sim) %dopar% {
+scenarioE <- foreach(i = 1:n_sim) %dopar% {
   params$keep_cm_fixed <- FALSE
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
@@ -280,7 +283,7 @@ scenarioB <- foreach(i = 1:n_sim) %dopar% {
   seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
   as.data.frame(seir_out)
 }
-saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioE.rds")
+saveRDS(scenarioE, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioE.rds")
 doParallel::stopImplicitCluster()
 
 # Post-process scenario runs ---------------------------------------------------
