@@ -160,7 +160,7 @@ params <- list(N = n_vec,  # population size
                t_vac_start = NULL,
                t_vac_end = NULL,
                eta = 1, # - ve_inf$mean_ve,
-               eta_hosp = 1, # - ve_hosp$mean_ve,
+               #eta_hosp = 1, # - ve_hosp$mean_ve,
                eta_trans = 1 # - ve_trans$mean_ve
               )
 

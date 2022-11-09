@@ -1,3 +1,4 @@
+/rivm/s/ainsliek/code/age_struct_seir_ode_exam.R="14C31BB0"
 /rivm/s/ainsliek/code/avacado/.gitignore="D6465A38"
 /rivm/s/ainsliek/code/avacado/R/choose_contact_matrix.R="41D618D0"
 /rivm/s/ainsliek/code/avacado/R/choose_contact_matrix_simple.R="2FF5FDB2"
@@ -10,6 +11,8 @@
 /rivm/s/ainsliek/code/avacado/inst/extdata/scripts/visualise_results.R="73311506"
 /rivm/s/ainsliek/code/vacamole/R/age_struct_seir_ode2.R="6B4407F8"
 /rivm/s/ainsliek/code/vacamole/inst/extdata/depricated/age_struct_seir_ode_test.R="FB788842"
+/rivm/s/ainsliek/code/vacamole/inst/extdata/scripts/scenario_hub/fit_model_to_data_debug.R="04F94D2D"
 /rivm/s/ainsliek/code/vacamole/inst/extdata/scripts/scenario_hub/main_script_impact_najaarsprik.R="7549FD1D"
 /rivm/s/ainsliek/code/vacamole/inst/extdata/scripts/scenario_hub/main_script_round2.R="C5C071E9"
+/rivm/s/ainsliek/code/vacamole/inst/extdata/scripts/scenario_hub/minimal_working_example_negative_values.R="549E80D7"
 /rivm/s/ainsliek/code/vacamole/inst/extdata/scripts/scenario_hub/visualise_results_round2.R="D2E8A89B"
