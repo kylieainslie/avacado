@@ -22,10 +22,10 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
     }
     
     # determine contact matrix to use based on criteria
-    tmp2 <- choose_contact_matrix(params = params, 
-                                  criteria = ic_admin[t], 
-                                  flag_open = flag_open, 
-                                  keep_fixed = params$keep_cm_fixed)
+    tmp2 <- choose_contact_matrix_simple(params = params, 
+                                         criteria = ic_admin[t], 
+                                         flag_open = flag_open, 
+                                         keep_fixed = params$keep_cm_fixed)
     contact_mat_list[[t]] <- tmp2$contact_matrix
     flag_open <- tmp2$flag_open
     
