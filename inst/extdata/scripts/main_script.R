@@ -12,14 +12,10 @@ options(dplyr.summarise.inform = FALSE)
 
 # Load required packages/functions ---------------------------------
 library(deSolve)
-library(reshape2)
-library(ggplot2)
-library(dplyr)
-library(stringr)
-library(tidyr)
+#library(reshape2)
+library(tidyverse)
 library(readxl)
-library(rARPACK)
-library(readr)
+#library(rARPACK)
 library(lubridate)
 library(foreach)
 library(doParallel)
@@ -107,13 +103,13 @@ hic2r  <- (1 - p_hospital2death) / time_in_hic
 # we need to solve the following equation for lambda (waning rate)
 # tau = time since recovery
 # p = probability still immune
-Fk <- function(lambda, tau, p){
-  exp(-tau * lambda) * (6 + (6 * tau * lambda) + (3 * tau^2 * lambda^2) 
-                        + (tau^3 * lambda^3)) - (p * 6)
-}
-
-# wane_3months <- uniroot(Fk, c(0,1), tau = 92, p = 0.6)$root
-wane_8months <- uniroot(Fk, c(0,1), tau = 244, p = 0.6)$root
+# Fk <- function(lambda, tau, p){
+#   exp(-tau * lambda) * (6 + (6 * tau * lambda) + (3 * tau^2 * lambda^2) 
+#                         + (tau^3 * lambda^3)) - (p * 6)
+# }
+# 
+# # wane_3months <- uniroot(Fk, c(0,1), tau = 92, p = 0.6)$root
+# wane_8months <- uniroot(Fk, c(0,1), tau = 244, p = 0.6)$root
 # contact matrices --------------------------------------------------
 path <- "/rivm/s/ainsliek/data/contact_matrices/converted/"
 # path <- "inst/extdata/inputs/contact_matrices/converted/"
@@ -133,7 +129,7 @@ params <- list(N = n_vec,  # population size
                beta1 = 0.14,
                sigma = 0.5,
                epsilon = 0.00,
-               omega = wane_8months,
+               omega = 0.0038, # 60% immunity after 8 months from Exp dist
                gamma = i2r,
                gamma_v = iv2rv,
                h = i2h,
