@@ -315,12 +315,13 @@ outB <- list()
 outC <- list()
 outD <- list()
 outE <- list()
+
 # loop over samples and summarize results for each scenario
 for(s in 1:n_sim){
   # specify shared parameter values (transmission rate and starting contact matrix)
   params$beta <- betas100[s]
   params$c_start <- april_2017[[s]]
-  params$c_open <- params$c_start
+  params$c_open <- params$c_lockdown
   
   # Scenario A - no measures
   params$keep_cm_fixed <- TRUE
@@ -351,7 +352,7 @@ for(s in 1:n_sim){
   
   # Scenario D - R<1 @ high incidence
   params$keep_cm_fixed <- FALSE
-  params$c_lockdown <- june_2020[[i]]
+  params$c_lockdown <- june_2020[[s]]
   params$thresh_l <- 40
   
   seir_outputD <- postprocess_age_struct_model_output_simple(scenarioD[[s]])
@@ -361,7 +362,7 @@ for(s in 1:n_sim){
   
   # Scenario E - zero covid
   params$keep_cm_fixed <- FALSE
-  params$c_lockdown <- june_2020[[i]]
+  params$c_lockdown <- june_2020[[s]]
   params$thresh_l <- 1
   params$thresh_o <- 0
   
@@ -376,10 +377,13 @@ for(s in 1:n_sim){
 dfA <- bind_rows(outA) %>% mutate(scenario_id = "A-Wave1") 
 dfB <- bind_rows(outB) %>% mutate(scenario_id = "B-Wave1") 
 dfC <- bind_rows(outC) %>% mutate(scenario_id = "C-Wave1")
-dfD <- bind_rows(outC) %>% mutate(scenario_id = "D-Wave1")
-dfE <- bind_rows(outC) %>% mutate(scenario_id = "E-Wave1")
+dfD <- bind_rows(outD) %>% mutate(scenario_id = "D-Wave1")
+dfE <- bind_rows(outE) %>% mutate(scenario_id = "E-Wave1")
 
-
+# create single post-processed data frame to save to directory
+df_wave1 <- bind_rows(dfA, dfB, dfC, dfD, dfE)
+  
+saveRDS(df_wave1, "inst/extdata/results/covid_scenarios/scenario_results_wave1.rds")
 
 
 
