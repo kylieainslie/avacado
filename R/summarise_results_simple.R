@@ -114,7 +114,7 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
     select(-wk)
   
   # calculate hospital occupancy -----------------------------------------------
-  ic_occ <-  seir_output$IC + seir_output$ICv %>%
+  ic_occ <-  (seir_output$IC + seir_output$ICv) %>%
     rename_with(., ~ paste0("age_group",1:9)) 
   
   ic_occ <- ic_occ %>%
