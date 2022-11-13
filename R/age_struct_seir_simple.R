@@ -70,7 +70,6 @@ age_struct_seir_simple <- function(times, init, params) {
       contact_mat <- tmp2$contact_matrix
       flag_open <- tmp2$flag_open
       }
-      print(flag_open)
     # determine force of infection ----------------------------------
     # seasonality
     calendar_day <- lubridate::yday(as.Date(times, origin = calendar_start_date))
@@ -126,7 +125,6 @@ age_struct_seir_simple <- function(times, init, params) {
     # assign variables to global environment, so they can be used for
     # the next iteration
     assign("flag_open", flag_open, envir = globalenv())
-    assign("t_open", t_open, envir = globalenv())
     # output --------------------------------------------------------
     list(c(dt, dS, dSv, dE, dEv, dI, dIv, dH, dHv, dIC, dICv,
            dH_IC, dH_ICv, dD, dR, dRv#, dN
