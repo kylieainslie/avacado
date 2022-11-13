@@ -146,7 +146,7 @@ params <- list(N = n_vec,  # population size
                # contact matrices for different levels of NPIs
                c_start = april_2017$mean,
                c_lockdown = april_2020$mean,
-               c_open = april_2017$mean,
+               c_open = april_2020$mean, # keep lockdown contact matrix
                keep_cm_fixed = FALSE,
                # IC admission thresholds
                thresh_o = 1,
@@ -212,7 +212,7 @@ n_sim <- 100
 scenarioA <- foreach(i = 1:n_sim) %dopar% {
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
-  params$keep_cm_fixed <- TRUE # force contact matrix to stay pre-COVID
+  params$keep_cm_fixed <- TRUE # force contact matrix to stay fixed
   
   rk45 <- rkMethod("rk45dp7")
   seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
