@@ -228,7 +228,7 @@ scenarioB <- foreach(i = 1:n_sim) %dopar% {
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
   params$c_lockdown <- june_2020[[i]]
-  params$c_open <- params$c_start
+  params$c_open <- params$c_lockdown
   
   rk45 <- rkMethod("rk45dp7")
   seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
@@ -237,14 +237,14 @@ scenarioB <- foreach(i = 1:n_sim) %dopar% {
 saveRDS(scenarioB, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioB.rds")
 doParallel::stopImplicitCluster()
 
-# Scenario C: R<1 @ low incidence ----
+# Scenario C: R<1 @ LOW incidence ----
 registerDoParallel(cores=15)
 scenarioC <- foreach(i = 1:n_sim) %dopar% {
   params$keep_cm_fixed <- FALSE
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
-  params$c_lockdown <- june_2020[[i]]
-  params$c_open <- params$c_start
+  params$c_lockdown <- april_2020[[i]]
+  params$c_open <- params$c_lockdown
   params$thresh_l <- 10
   
   rk45 <- rkMethod("rk45dp7")
@@ -254,14 +254,14 @@ scenarioC <- foreach(i = 1:n_sim) %dopar% {
 saveRDS(scenarioC, "/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioC.rds")
 doParallel::stopImplicitCluster()
 
-# Scenario D: R<1 @ high incidence ----
+# Scenario D: R<1 @ HIGH incidence ----
 registerDoParallel(cores=15)
 scenarioD <- foreach(i = 1:n_sim) %dopar% {
   params$keep_cm_fixed <- FALSE
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
-  params$c_lockdown <- june_2020[[i]]
-  params$c_open <- params$c_start
+  params$c_lockdown <- april_2020[[i]]
+  params$c_open <- params$c_lockdown
   params$thresh_l <- 40
   
   rk45 <- rkMethod("rk45dp7")
@@ -277,8 +277,8 @@ scenarioE <- foreach(i = 1:n_sim) %dopar% {
   params$keep_cm_fixed <- FALSE
   params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
-  params$c_lockdown <- june_2020[[i]]
-  params$c_open <- params$c_start
+  params$c_lockdown <- april_2020[[i]]
+  params$c_open <- params$c_lockdown
   params$thresh_l <- 1
   params$thresh_o <- 0
   
@@ -305,10 +305,16 @@ doParallel::stopImplicitCluster()
 # read in saved output from model runs
 scenarioA <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioA.rds")
 scenarioB <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioB.rds")
+scenarioC <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioC.rds")
+scenarioD <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioD.rds")
+scenarioE <- readRDS("/rivm/s/ainsliek/results/covid_scenarios/wave1_scenarioE.rds")
 
 # create empty lists to store outputs
 outA <- list()
 outB <- list()
+outC <- list()
+outD <- list()
+outE <- list()
 # loop over samples and summarize results for each scenario
 for(s in 1:n_sim){
   # specify shared parameter values (transmission rate and starting contact matrix)
