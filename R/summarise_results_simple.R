@@ -71,8 +71,8 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
   #   select(-wk)
   # 
   # calculate hospital admissions ----------------------------------------------
-  hosp_admissions <- sweep(seir_output$I + params$eta_hosp * seir_output$Iv, 
-                           2, params$h, "*") %>%
+  hosp_admissions <- sweep(seir_output$I, 2, params$h, "*") +
+    sweep(seir_output$Iv, 2, params$h_v, "*") %>%
     rename_with(., ~ paste0("age_group",1:9)) 
   
   hosp_admissions <- hosp_admissions %>%
@@ -86,7 +86,7 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
     select(-wk)
   
   # calculate hospital occupancy -----------------------------------------------
-  hosp_occ <-  seir_output$H + seir_output$H_IC + seir_output$Hv + seir_output$H_ICv %>%
+  hosp_occ <-  (seir_output$H + seir_output$H_IC + seir_output$Hv + seir_output$H_ICv) %>%
     rename_with(., ~ paste0("age_group",1:9)) 
   
   hosp_occ <- hosp_occ %>%
