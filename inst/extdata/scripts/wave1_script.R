@@ -1,9 +1,9 @@
 # Script for running scenarios for the RIVM Scenarios Project
+# This script runs simulations for Wave 1
 
 # preamble ---------------------------------------------------------
-# This script will load necessary packages, data sources, fit the 
-# model to data, and then run scenarios.
-
+# This script will load necessary packages, data sources, run 
+# scenarios.
 # ------------------------------------------------------------------
 
 # Options ----------------------------------------------------------
@@ -36,23 +36,6 @@ age_dist <- c(0.10319920, 0.11620856, 0.12740219, 0.12198707,
               0.04622194)
 n <- 17407585 # Dutch population size
 n_vec <- n * age_dist
-
-# ve estimates ------------------------------------------------------
-ve <- read_excel("inst/extdata/inputs/ve_estimates/ve_dat.xlsx", sheet = "wildtype") %>%
-  group_by(dose, age_group, outcome) %>%
-  summarise(mean_ve = mean(ve))
-
-ve_inf <- ve %>% 
-  filter(outcome == "infection",
-         dose == "d2")
-
-ve_hosp <- ve %>% 
-  filter(outcome == "hospitalisation",
-         dose == "d2")
-
-ve_trans <- ve %>% 
-  filter(outcome == "transmission",
-         dose == "d2")
 
 # probabilities -------------------------------------------------------
 dons_probs <- read_xlsx("inst/extdata/inputs/ProbabilitiesDelays_20210107.xlsx")
@@ -95,21 +78,6 @@ time_in_hic <- (p_hospital2death * time_hospital2death) + ((1 - p_hospital2death
 hic2d  <- p_hospital2death / time_in_hic         
 hic2r  <- (1 - p_hospital2death) / time_in_hic
 
-# determine waning rate from Erlang distribution --------------------
-# We want the rate that corresponds to a 60% reduction in immunity after 
-#   - 3 months (92 days) or
-#   - 8 months (244 days)
-
-# we need to solve the following equation for lambda (waning rate)
-# tau = time since recovery
-# p = probability still immune
-# Fk <- function(lambda, tau, p){
-#   exp(-tau * lambda) * (6 + (6 * tau * lambda) + (3 * tau^2 * lambda^2) 
-#                         + (tau^3 * lambda^3)) - (p * 6)
-# }
-# 
-# # wane_3months <- uniroot(Fk, c(0,1), tau = 92, p = 0.6)$root
-# wane_8months <- uniroot(Fk, c(0,1), tau = 244, p = 0.6)$root
 # contact matrices --------------------------------------------------
 path <- "/rivm/s/ainsliek/data/contact_matrices/converted/"
 # path <- "inst/extdata/inputs/contact_matrices/converted/"
@@ -117,16 +85,13 @@ april_2017     <- readRDS(paste0(path,"transmission_matrix_april_2017.rds"))
 april_2020     <- readRDS(paste0(path,"transmission_matrix_april_2020.rds"))
 june_2020      <- readRDS(paste0(path,"transmission_matrix_june_2020.rds"))
 september_2020 <- readRDS(paste0(path,"transmission_matrix_september_2020.rds"))
-# february_2021  <- readRDS(paste0(path,"transmission_matrix_february_2021.rds"))
-# june_2021      <- readRDS(paste0(path,"transmission_matrix_june_2021.rds"))
-# november_2021  <- readRDS(paste0(path,"transmission_matrix_november_2021.rds"))
 
 # specify initial model parameters ---------------------------------
 # parameters must be in a named list
 params <- list(N = n_vec,  # population size
                # rates
                beta = 0.0004,
-               beta1 = 0.14,
+               beta1 = 0, #0.14,
                sigma = 0.5,
                epsilon = 0.00,
                omega = 0.0038, # 60% immunity after 8 months from Exp dist
@@ -155,9 +120,8 @@ params <- list(N = n_vec,  # population size
                alpha = c(rep(0,9)),
                t_vac_start = NULL,
                t_vac_end = NULL,
-               eta = 1, # - ve_inf$mean_ve,
-               #eta_hosp = 1, # - ve_hosp$mean_ve,
-               eta_trans = 1 # - ve_trans$mean_ve
+               eta = 1, 
+               eta_trans = 1
               )
 
 # Specify initial conditions --------------------------------------
@@ -199,7 +163,7 @@ init <- c(
 # Scenario D: R < 1 @ low inf rate
 # Scenario E: zero COVID
 t_start <- init[1]
-t_end <- t_start + 365
+t_end <- t_start + yday(as.Date("2020-10-01"))
 times <- as.integer(seq(t_start, t_end, by = 1))
 betas <- readRDS("../vacamole/inst/extdata/results/model_fits/beta_draws.rds")
 # sample 100 betas from last time window
@@ -383,7 +347,7 @@ dfE <- bind_rows(outE) %>% mutate(scenario_id = "E-Wave1")
 # create single post-processed data frame to save to directory
 df_wave1 <- bind_rows(dfA, dfB, dfC, dfD, dfE)
   
-saveRDS(df_wave1, "inst/extdata/results/covid_scenarios/scenario_results_wave1.rds")
+saveRDS(df_wave1, "inst/extdata/results/wave1_results.rds")
 
 
 
