@@ -148,6 +148,20 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
            horizon = paste(wk, "wk")) %>%
     select(-wk)
   
+  # calculate number immune (people in R compartment)
+  recovered <-  (seir_output$R + seir_output$Rv) %>%
+    rename_with(., ~ paste0("age_group",1:9)) 
+  
+  recovered <- recovered %>%
+    mutate(target_variable = "occ rec",
+           time = t_vec,
+           date = as.Date(time, origin = params$calendar_start_date),
+           epiweek = lubridate::epiweek(date),
+           year = lubridate::epiyear(date),
+           wk = floor(difftime(date, date[1], units = "weeks")) + 1,
+           horizon = paste(wk, "wk")) %>%
+    select(-wk)
+  
   # Create object into format for scenario hub ---------------------------------
   # bind all outcome data frames together and wrangle
   rtn <- bind_rows(new_infections, 
@@ -156,7 +170,8 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
                    hosp_occ,
                    ic_admissions, 
                    ic_occ,
-                   new_deaths) %>%
+                   new_deaths,
+                   recovered) %>%
     pivot_longer(cols = age_group1:age_group9,
                  names_to = "age_group",
                  names_prefix = "age_group",
