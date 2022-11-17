@@ -34,6 +34,7 @@ summarise_results_simple <- function(seir_output, params, t_vec) {
   # get force of infection (lambda) --------------------------------------------
   calendar_day <- lubridate::yday(as.Date(t_vec, 
                                           origin = params$calendar_start_date))
+  #print(params$beta)
   beta_t <- params$beta * (1 + params$beta1 * cos(2 * pi * calendar_day / 365.24)) 
   lambda <- get_foi_simple(x  = seir_output, 
                            y1 = params$eta_trans,

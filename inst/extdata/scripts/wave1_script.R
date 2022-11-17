@@ -37,6 +37,23 @@ age_dist <- c(0.10319920, 0.11620856, 0.12740219, 0.12198707,
 n <- 17407585 # Dutch population size
 n_vec <- n * age_dist
 
+# ve estimates ------------------------------------------------------
+ve <- read_excel("inst/extdata/inputs/ve_estimates/ve_dat.xlsx", sheet = "wildtype") %>%
+  group_by(dose, age_group, outcome) %>%
+  summarise(mean_ve = mean(ve))
+
+ve_inf <- ve %>% 
+  filter(outcome == "infection",
+         dose == "d2")
+
+ve_hosp <- ve %>% 
+  filter(outcome == "hospitalisation",
+         dose == "d2")
+
+ve_trans <- ve %>% 
+  filter(outcome == "transmission",
+         dose == "d2")
+
 # probabilities -------------------------------------------------------
 dons_probs <- read_xlsx("inst/extdata/inputs/ProbabilitiesDelays_20210107.xlsx")
 p_infection2admission <- dons_probs$P_infection2admission
@@ -163,7 +180,7 @@ init <- c(
 # Scenario D: R < 1 @ low inf rate
 # Scenario E: zero COVID
 t_start <- init[1]
-t_end <- t_start + yday(as.Date("2020-10-01"))
+t_end <- t_start + 365 #yday(as.Date("2020-10-01"))
 times <- as.integer(seq(t_start, t_end, by = 1))
 betas <- readRDS("../vacamole/inst/extdata/results/model_fits/beta_draws.rds")
 # sample 100 betas from last time window
@@ -285,7 +302,6 @@ for(s in 1:n_sim){
   # specify shared parameter values (transmission rate and starting contact matrix)
   params$beta <- betas100[s]
   params$c_start <- april_2017[[s]]
-  params$c_open <- params$c_lockdown
   
   # Scenario A - no measures
   params$keep_cm_fixed <- TRUE
@@ -298,6 +314,7 @@ for(s in 1:n_sim){
   # Scenario B - voluntary
   params$keep_cm_fixed <- FALSE
   params$c_lockdown <- june_2020[[s]]
+  params$c_open <- params$c_lockdown
   
   seir_outputB <- postprocess_age_struct_model_output_simple(scenarioB[[s]])
   seir_outcomesB <- summarise_results_simple(seir_outputB, params = params, t_vec = times) %>%
@@ -306,7 +323,8 @@ for(s in 1:n_sim){
   
   # Scenario C - R<1 @ low incidence
   params$keep_cm_fixed <- FALSE
-  params$c_lockdown <- june_2020[[s]]
+  params$c_lockdown <- april_2020[[s]]
+  params$c_open <- params$c_lockdown
   params$thresh_l <- 10
   
   seir_outputC <- postprocess_age_struct_model_output_simple(scenarioC[[s]])
@@ -316,7 +334,8 @@ for(s in 1:n_sim){
   
   # Scenario D - R<1 @ high incidence
   params$keep_cm_fixed <- FALSE
-  params$c_lockdown <- june_2020[[s]]
+  params$c_lockdown <- april_2020[[s]]
+  params$c_open <- params$c_lockdown
   params$thresh_l <- 40
   
   seir_outputD <- postprocess_age_struct_model_output_simple(scenarioD[[s]])
@@ -326,7 +345,8 @@ for(s in 1:n_sim){
   
   # Scenario E - zero covid
   params$keep_cm_fixed <- FALSE
-  params$c_lockdown <- june_2020[[s]]
+  params$c_lockdown <- april_2020[[s]]
+  params$c_open <- params$c_lockdown
   params$thresh_l <- 1
   params$thresh_o <- 0
   
@@ -338,18 +358,19 @@ for(s in 1:n_sim){
 }
 
 # create data frames
-dfA <- bind_rows(outA) %>% mutate(scenario_id = "A-Wave1") 
-dfB <- bind_rows(outB) %>% mutate(scenario_id = "B-Wave1") 
-dfC <- bind_rows(outC) %>% mutate(scenario_id = "C-Wave1")
-dfD <- bind_rows(outD) %>% mutate(scenario_id = "D-Wave1")
-dfE <- bind_rows(outE) %>% mutate(scenario_id = "E-Wave1")
+dfA <- bind_rows(outA) %>% mutate(scenario_id = "A") 
+dfB <- bind_rows(outB) %>% mutate(scenario_id = "B") 
+dfC <- bind_rows(outC) %>% mutate(scenario_id = "C")
+dfD <- bind_rows(outD) %>% mutate(scenario_id = "D")
+dfE <- bind_rows(outE) %>% mutate(scenario_id = "E")
 
 # create single post-processed data frame to save to directory
 df_wave1 <- bind_rows(dfA, dfB, dfC, dfD, dfE)
   
 saveRDS(df_wave1, "inst/extdata/results/wave1_results.rds")
 
-
+# free unused memory
+gc()
 
 
 
