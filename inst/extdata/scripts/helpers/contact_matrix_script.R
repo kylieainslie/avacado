@@ -17,6 +17,7 @@ contact_matrices_pico4 <- readRDS(paste0(path,"raw/Contactpatterns_PICO4_10y.rds
 contact_matrices_pico5 <- readRDS(paste0(path,"raw/Contactpatterns_PICO5_10y.rds"))       # June 2021
 contact_matrices_pico6 <- readRDS(paste0(path,"raw/Contactpatterns_PICO6_10y.rds"))       # November 2021
 contact_matrices_pico7 <- readRDS(paste0(path,"raw/Contactpatterns_PICO7_10y.rds"))       # February 2022
+contact_matrices_pico8 <- readRDS(paste0(path,"raw/Contactpatterns_PICO8_prelim_10y.rds"))# June 2022
 
 # need to run this before running convert_contact_matrices()------
 age_dist <- c(
@@ -40,6 +41,7 @@ february_2021  <- convert_contact_matrices(contact_matrices_pico4)
 june_2021      <- convert_contact_matrices(contact_matrices_pico5)
 november_2021  <- convert_contact_matrices(contact_matrices_pico6)
 february_2022  <- convert_contact_matrices(contact_matrices_pico7)
+june_2022  <- convert_contact_matrices(contact_matrices_pico8)
 
 # save output -----------------------------------------------------
 #save_path <- "inst/extdata/data/contact_matrices/converted/"
@@ -51,3 +53,4 @@ saveRDS(february_2021, file = paste0(path,"converted/transmission_matrix_februar
 saveRDS(june_2021, file = paste0(path,"converted/transmission_matrix_june_2021.rds"))
 saveRDS(november_2021, file = paste0(path,"converted/transmission_matrix_november_2021.rds"))
 saveRDS(february_2022, file = paste0(path,"converted/transmission_matrix_february_2022.rds"))
+saveRDS(june_2022, file = paste0(path,"converted/transmission_matrix_june_2022.rds"))
