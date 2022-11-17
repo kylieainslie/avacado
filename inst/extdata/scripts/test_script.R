@@ -1,4 +1,4 @@
-times <- seq(0, l00, by = 1)
+times <- seq(0, 365, by = 1)
 
 params <- list(N = n_vec,  # population size
                # rates
@@ -42,15 +42,15 @@ seir_out <- ode(init, times, age_struct_seir_simple, params, method = rk45)
 test <- as.data.frame(seir_out)
 
 # output error message if sum of all compartments is not equal to the total population size
-  if(!isTRUE(all.equal(sum(test[dim(test)[1],-c(1,2,138:146)]),sum(params$N)))){
-    stop("Error: sum of compartments is not equal to population size")
-  }
-  
-test_s <- test %>%
-  select(starts_with("S"))
-# head(test_s)
-
-plot(1:nrow(test_s), rowSums(test_s), type = "l")
+#   if(!isTRUE(all.equal(sum(test[dim(test)[1],-c(1,2,138:146)]),sum(params$N)))){
+#     stop("Error: sum of compartments is not equal to population size")
+#   }
+#   
+# test_s <- test %>%
+#   select(starts_with("S"))
+# # head(test_s)
+# 
+# plot(1:nrow(test_s), rowSums(test_s), type = "l")
 
 test_i <- test %>%
   select(starts_with("I"))
