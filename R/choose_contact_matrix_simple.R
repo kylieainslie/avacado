@@ -22,6 +22,7 @@ choose_contact_matrix_simple <- function(params,criteria,flag_open,keep_fixed) {
       flag_open <- flag_open + 1
       contact_matrix <- params$c_open
   } else if (criteria > params$thresh_o & criteria < params$thresh_l & flag_open > 0){
+      flag_open <- flag_open + 1
       contact_matrix <- params$c_open
   } else {
     contact_matrix <- params$c_start
