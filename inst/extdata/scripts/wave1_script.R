@@ -180,18 +180,20 @@ init <- c(
 # Scenario D: R < 1 @ low inf rate
 # Scenario E: zero COVID
 t_start <- init[1]
-t_end <- t_start + 365 #yday(as.Date("2020-10-01"))
+t_end <- t_start + 270 #yday(as.Date("2020-10-01"))
 times <- as.integer(seq(t_start, t_end, by = 1))
-betas <- readRDS("../vacamole/inst/extdata/results/model_fits/beta_draws.rds")
-# sample 100 betas from last time window
-betas100 <- sample(betas[[1]]$beta, 100)
+# betas <- readRDS("../vacamole/inst/extdata/results/model_fits/beta_draws.rds")
+# # sample 100 betas from last time window
+# betas100 <- sample(betas[[1]]$beta, 100)
 
 # register parallel backend
 registerDoParallel(cores=15)
+
 n_sim <- 100
 # Scenario A: no measures ----
 scenarioA <- foreach(i = 1:n_sim) %dopar% {
-  params$beta <- betas100[i]
+  flag_open <- 0
+  # params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
   params$keep_cm_fixed <- TRUE # force contact matrix to stay fixed
   
@@ -205,8 +207,9 @@ doParallel::stopImplicitCluster()
 # Scenario B: voluntary ----
 registerDoParallel(cores=15)
 scenarioB <- foreach(i = 1:n_sim) %dopar% {
+  flag_open <- 0
   params$keep_cm_fixed <- FALSE
-  params$beta <- betas100[i]
+  # params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
   params$c_lockdown <- june_2020[[i]]
   params$c_open <- params$c_lockdown
@@ -221,8 +224,9 @@ doParallel::stopImplicitCluster()
 # Scenario C: R<1 @ LOW incidence ----
 registerDoParallel(cores=15)
 scenarioC <- foreach(i = 1:n_sim) %dopar% {
+  flag_open <- 0
   params$keep_cm_fixed <- FALSE
-  params$beta <- betas100[i]
+  # params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
   params$c_lockdown <- april_2020[[i]]
   params$c_open <- params$c_lockdown
@@ -238,8 +242,9 @@ doParallel::stopImplicitCluster()
 # Scenario D: R<1 @ HIGH incidence ----
 registerDoParallel(cores=15)
 scenarioD <- foreach(i = 1:n_sim) %dopar% {
+  flag_open <- 0
   params$keep_cm_fixed <- FALSE
-  params$beta <- betas100[i]
+  # params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
   params$c_lockdown <- april_2020[[i]]
   params$c_open <- params$c_lockdown
@@ -255,8 +260,9 @@ doParallel::stopImplicitCluster()
 # Scenario E: zero covid ----
 registerDoParallel(cores=15)
 scenarioE <- foreach(i = 1:n_sim) %dopar% {
+  flag_open <- 0
   params$keep_cm_fixed <- FALSE
-  params$beta <- betas100[i]
+  # params$beta <- betas100[i]
   params$c_start <- april_2017[[i]]
   params$c_lockdown <- april_2020[[i]]
   params$c_open <- params$c_lockdown
@@ -300,7 +306,7 @@ outE <- list()
 # loop over samples and summarize results for each scenario
 for(s in 1:n_sim){
   # specify shared parameter values (transmission rate and starting contact matrix)
-  params$beta <- betas100[s]
+  # params$beta <- betas100[s]
   params$c_start <- april_2017[[s]]
   
   # Scenario A - no measures
