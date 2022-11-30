@@ -56,28 +56,30 @@ age_struct_seir_simple <- function(times, init, params) {
     
     # determine contact matrix based on IC admissions ---------------
     ic_admissions <- sum(i1 * (H + Hv))
-
-    # initialise flags
-    if(times == init[1] | params$keep_cm_fixed){
-      flag_open <- 0
+    if(ic_admissions > thresh_l){flag_open <- flag_open + 1}
+    
+    # choose contact matricx
+    if(times == init[1] | params$keep_cm_fixed | flag_open == 0){
       contact_mat <- c_start
     } else {
+      contact_mat <- c_lockdown
       # determine contact matrix to use based on criteria
-      tmp2 <- choose_contact_matrix_simple(params = params,
-                                           criteria = ic_admissions,
-                                           flag_open = flag_open,
-                                           keep_fixed = params$keep_cm_fixed)
-      contact_mat <- tmp2$contact_matrix
-      flag_open <- tmp2$flag_open
+      # tmp2 <- choose_contact_matrix_simple(params = params,
+      #                                      criteria = ic_admissions,
+      #                                      flag_open = flag_open,
+      #                                      keep_fixed = params$keep_cm_fixed)
+      # contact_mat <- tmp2$contact_matrix
+      # flag_open <- tmp2$flag_open
     }
     
-    if(identical(contact_mat, params$c_start)){
-      print("c_start")
-    } else if (identical(contact_mat, params$c_lockdown)){
-      print("c_lockdown")
-    } else if (identical(contact_mat, params$c_open)){
-      print("c_open")
-    }
+    # print(flag_open)
+    # if(identical(contact_mat, params$c_start)){
+    #   print("c_start")
+    # } else if (identical(contact_mat, params$c_lockdown)){
+    #   print("c_lockdown")
+    # } else if (identical(contact_mat, params$c_open)){
+    #   print("c_open")
+    # }
     # determine force of infection ----------------------------------
     # seasonality
     calendar_day <- lubridate::yday(as.Date(times, origin = calendar_start_date))
